@@ -312,6 +312,7 @@ html[data-theme="light"] {
 .post-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-top: 6px; }
 .pc-head { display: flex; align-items: center; gap: 12px; padding: 15px 22px; border-bottom: 1px solid var(--border); }
 .pc-who b { display: block; font-size: 14.5px; }
+.pc-who .lv-badge, .pc-who .grade-badge { margin-right: 8px; }
 .pc-who time { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .pc-head .btn { margin-left: auto; }
 .pc-body { padding: 22px 26px 6px; }
