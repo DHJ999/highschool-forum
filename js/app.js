@@ -405,16 +405,23 @@
 
       $("#topicList").innerHTML = list.length ? list.map((t) => {
         const rs = repliesOf(t);
+        const grade = t.authorGrade ?? t.category;
         return `
         <div class="topic-row trow" data-id="${t.id}">
           ${avatar(t.author, t.color)}
           <div class="trow-main">
+            <div class="trow-head">
+              <span class="trow-who">
+                <b>${esc(t.author)}</b>
+                ${t.authorTitle ? `<span class="lv-badge">${t.authorLv} ${t.authorTitle}</span>` : ""}
+                ${grade ? `<span class="grade-badge">${grade}</span>` : ""}
+              </span>
+              <time>发布于 ${fmtTime(t.created)}</time>
+            </div>
             <p class="trow-title">${t.pinned ? '<span class="pin-badge">📌 置顶</span>' : ""}${esc(t.title)}</p>
-            <p class="trow-excerpt">${esc((t.body[0] || "").slice(0, 80))}</p>
+            <p class="trow-excerpt">${esc(t.body.join(" ").slice(0, 160))}</p>
             <div class="trow-meta">
-              ${catChip(t.category)}${tagChips(t.tags)}
-              <span class="dot">·</span><span>${esc(t.author)}</span>
-              <span class="dot">·</span><span>${ageOf(lastActivity(t))}</span>
+              ${tagChips(t.tags)}
               <span class="trow-nums">
                 <span title="浏览">👁 <b>${viewCount(t)}</b></span>
                 <span title="回复">💬 <b>${rs.length}</b></span>
