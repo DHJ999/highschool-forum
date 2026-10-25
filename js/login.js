@@ -6,6 +6,12 @@
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
 
+  /* 恢复主题偏好（登录页不加载 auth.js，需自行读取，与其他页面联动） */
+  try {
+    const s = JSON.parse(localStorage.getItem("sjforum.v1"));
+    if (s && s.theme) document.documentElement.dataset.theme = s.theme;
+  } catch {}
+
   /* 主题切换（与主站一致的本地记忆） */
   $("#btnTheme").addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
