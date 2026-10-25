@@ -111,7 +111,12 @@
   }
   function viewCount(t) {
     const extra = (window.TOPIC_EXTRA || {})[t.id] || 0;
-    return (t.views || 0) + extra;
+    return (t.views || 0) + (t.viewExtra || 0) + extra;
+  }
+  /* 点赞总数：主楼服务端计数 + 各评论计数之和 */
+  function likeTotal(t) {
+    const base = t.likeCount ?? t.likes ?? 0;
+    return base + repliesOf(t).reduce((n, r) => n + (r.likeCount || 0), 0);
   }
 
   /* ---------- 进入页 ---------- */
@@ -350,7 +355,7 @@
       } else {
         /* 热门：点赞量从高到低；点赞相同看评论量；再相同按最近活跃 */
         rest.sort((a, b) =>
-          (b.likes - a.likes) ||
+          (likeTotal(b) - likeTotal(a)) ||
           (repliesOf(b).length - repliesOf(a).length) ||
           (lastActivity(b) - lastActivity(a)));
       }
@@ -371,7 +376,7 @@
               <span class="trow-nums">
                 <span title="浏览">👁 <b>${viewCount(t)}</b></span>
                 <span title="回复">💬 <b>${rs.length}</b></span>
-                <span title="点赞">❤ <b>${t.likes}</b></span>
+                <span title="点赞">❤ <b>${likeTotal(t)}</b></span>
               </span>
             </div>
           </div>
@@ -537,7 +542,7 @@
             <div class="pc-badges">${catChip(t.category)}${tagChips(t.tags)}</div>
             <div class="pc-actions">
               <span class="pa-item" title="浏览量">👁 浏览 <b>${viewCount(t)}</b></span>
-              <button class="pa-item act-like" data-target="op">❤ 点赞 <b>${t.likeCount || 0}</b></button>
+              <button class="pa-item act-like" data-target="op">❤ 点赞 <b>${likeTotal(t)}</b></button>
               <button class="pa-item" id="paComment">💬 评论 <b>${rs.length}</b></button>
               <button class="pa-item" id="paFav">${t._fav ? "⭐ 已收藏" : "☆ 收藏"}</button>
             </div>
