@@ -512,6 +512,7 @@ html[data-theme="light"] {
 /* 隐藏 Edge/Chromium 密码框原生的显示密码按钮，统一用自带的 .pw-eye */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear { display: none; }
+.pw-wrap { position: relative; }
 .pw-wrap input { width: 100%; padding-right: 42px !important; }
 .pw-eye {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
