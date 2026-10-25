@@ -105,7 +105,7 @@
   }
 
   /* ---------- 头像与昵称 ---------- */
-  const PALETTE = ["#e07b39", "#5c7a99", "#6f7f5e", "#a8628a", "#4f7a7a", "#8a6bab", "#b98a2e", "#e05b5b"];
+  const PALETTE = ["#f09048", "#599ac7", "#83b058", "#c86da0", "#4fb3b3", "#9d7fd6", "#d9a832", "#ee6b6b"];
 
   function openProfileEdit() {
     const u = window.AUTH.user;
