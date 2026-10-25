@@ -89,13 +89,14 @@
   /* ---------- 控制台 ---------- */
   async function renderDash() {
     $("#admLogout").hidden = false;
-    let ov, users, topics, stats;
+    let ov, users, topics, stats, cats;
     try {
-      [ov, users, topics, stats] = await Promise.all([
+      [ov, users, topics, stats, cats] = await Promise.all([
         fetch("/api/admin/overview").then((r) => r.json()),
         fetch("/api/admin/users").then((r) => r.json()),
         fetch("/api/admin/topics").then((r) => r.json()),
         fetch("/api/admin/stats").then((r) => r.json()),
+        fetch("/api/categories").then((r) => r.json()),
       ]);
     } catch {
       root.innerHTML = '<div class="adm-card">无法连接后端服务。</div>';
@@ -129,6 +130,20 @@
 
       <div class="adm-card">
         <div class="adm-card-head">
+          <h3 style="margin:0">年级分类</h3>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 10px">
+          当前生效的年级（基础配置 ∪ 已注册用户的年级）：
+          ${cats.map((c) => `<span class="chip cat" style="margin-right:6px"><span class="cat-dot" style="background:${c.color}"></span>${c.label}</span>`).join("")}
+        </p>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="catYears" placeholder="输入基础年级，逗号分隔，如 2018, 2019, 2020" value="${cats.map((c) => c.id).join(", ")}" style="margin:0">
+          <button class="btn btn-primary" id="catSave" style="white-space:nowrap">保存</button>
+        </div>
+      </div>
+
+      <div class="adm-card">
+        <div class="adm-card-head">
           <h3 style="margin:0">用户管理（<span id="userCount"></span>）</h3>
           <input id="admSearch" placeholder="搜索昵称 / 邮箱 / 标签 / 年级" value="${esc(userQuery)}">
         </div>
@@ -152,6 +167,20 @@
           </tr>`).join("")}
         </table>` : '<p style="color:var(--muted)">用户还没有发布话题（内置示例话题不在此列）。</p>'}
       </div>`;
+
+    /* 年级分类保存 */
+    $("#catSave", root).addEventListener("click", async () => {
+      const years = $("#catYears", root).value.split(/[\s,，]+/).filter(Boolean).map(Number).filter((y) => y >= 1990 && y <= 2026);
+      if (!years.length) { toast("请填写有效的年级（1990–2026）"); return; }
+      const r = await fetch("/api/admin/categories", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ years }),
+      });
+      const d = await r.json();
+      if (!r.ok) { toast(d.error || "保存失败"); return; }
+      toast("年级分类已保存");
+      renderDash();
+    });
 
     /* 用户搜索：按昵称/邮箱/标签/年级过滤（只重绘表格，不整页刷新） */
     const searchBox = $("#admSearch", root);

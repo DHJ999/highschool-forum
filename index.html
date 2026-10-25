@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>风华正茂</title>
-<link rel="stylesheet" href="css/style.css?v=10">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body data-page="index">
 
@@ -59,14 +59,12 @@
     <h3>创建新话题</h3>
     <div class="field"><label>标题</label><input id="nTitle" required maxlength="60" placeholder="用一句话概括那段回忆"></div>
     <div class="field-2">
-      <div class="field"><label>年级分类</label>
-        <select id="nCat">
-          <option value="2018">2018级</option>
-          <option value="2019">2019级</option>
-          <option value="2020">2020级</option>
-        </select>
+      <div class="field"><label>年级分类（自动选择你的年级）</label>
+        <select id="nCat"></select>
       </div>
-      <div class="field"><label>标签（空格分隔，最多 4 个）</label><input id="nTags" placeholder="例如：军训 运动会"></div>
+      <div class="field"><label>标签（空格分隔，最多 4 个）</label><input id="nTags" placeholder="点击下方推荐标签或自己输入">
+        <div class="tag-sugg" id="tagSugg"></div>
+      </div>
     </div>
     <div class="field"><label>正文</label><textarea id="nBody" rows="6" required placeholder="把它写下来，讲给当年的我们听……"></textarea></div>
     <div class="foot">
@@ -76,8 +74,8 @@
   </form>
 </div>
 
-<script src="js/data.js?v=10"></script>
-<script src="js/auth.js?v=10"></script>
-<script src="js/app.js?v=10"></script>
+<script src="js/data.js?v=11"></script>
+<script src="js/auth.js?v=11"></script>
+<script src="js/app.js?v=11"></script>
 </body>
 </html>

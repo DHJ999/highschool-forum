@@ -192,6 +192,28 @@ app.post("/api/auth/reset-password", (req, res) => {
   res.json({ ok: true, message: "密码已重置，请使用新密码登录" });
 });
 
+/* ---------- 年级分类：基础配置 ∪ 已注册用户的年级 ---------- */
+const YEAR_COLORS = ["#e07b39", "#9a6bd8", "#58a666", "#5c7a99", "#a8628a", "#4f7a7a", "#8a6bab", "#b98a2e"];
+const BASE_COLORS = { 2018: "#e07b39", 2019: "#9a6bd8", 2020: "#58a666" };
+function effectiveCategories() {
+  db.categories = db.categories || [2018, 2019, 2020];
+  const set = new Set(db.categories.map(Number));
+  db.users.forEach((u) => { if (u.role !== "admin" && u.grade) set.add(Number(u.grade)); });
+  return [...set]
+    .filter((y) => Number.isInteger(y) && y >= 1990 && y <= 2026)
+    .sort((a, b) => a - b)
+    .map((y) => ({ id: y, label: `${y}级`, color: BASE_COLORS[y] || YEAR_COLORS[(y - 1990) % YEAR_COLORS.length] }));
+}
+app.get("/api/categories", (req, res) => res.json(effectiveCategories()));
+app.post("/api/admin/categories", requireAdmin, (req, res) => {
+  const years = (req.body || {}).years;
+  if (!Array.isArray(years)) return res.status(400).json({ error: "参数错误" });
+  db.categories = [...new Set(years.map(Number)
+    .filter((y) => Number.isInteger(y) && y >= 1990 && y <= 2026))].sort((a, b) => a - b);
+  store.save();
+  res.json({ ok: true, categories: effectiveCategories() });
+});
+
 /* 公开站点统计（右侧栏展示用，不含敏感信息；管理员不展示在用户侧） */
 app.get("/api/site/stats", (req, res) => {
   const replyCount = Object.values(db.replies).reduce((n, l) => n + l.length, 0);

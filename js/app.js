@@ -11,7 +11,10 @@
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[c]));
-  const catById = (id) => DATA.categories.find((c) => c.id === +id);
+  const catById = (id) => (window.CATS || DATA.categories).find((c) => c.id === +id);
+  const loadCats = async () => {
+    try { window.CATS = await (await fetch("/api/categories")).json(); } catch {}
+  };
 
   /* ---------- 本机存储 ---------- */
   const STORE_KEY = "sjforum.v1";
@@ -224,7 +227,7 @@
     $("#sideTopics").innerHTML = `
       <a class="side-item ${!activeCat && !activeTag ? "active" : ""}" href="index.html">📋 全部话题</a>
       <a class="side-item" data-act="new">✏️ 创建话题</a>`;
-    $("#sideCats").innerHTML = DATA.categories.map((c) => `
+    $("#sideCats").innerHTML = (window.CATS || DATA.categories).map((c) => `
       <a class="side-item ${activeCat === c.id ? "active" : ""}" href="index.html?cat=${c.id}">
         <span class="cat-dot" style="background:${c.color}"></span>${c.label}
         <span class="cnt">${catCount(c.id)}</span>
@@ -255,13 +258,41 @@
   }
   bindTopbar();
 
-  /* 创建话题弹窗（两页共用） */
+  /* 创建话题弹窗（仅 index 页） */
+  const SUGGESTED_TAGS = ["军训", "运动会", "食堂", "老班", "晚自习", "高考", "毕业", "老照片", "网课", "返校"];
   function openComposer() {
     const mask = $("#newMask");
     if (!mask) return;
     $("#nTitle").value = "";
     $("#nTags").value = "";
     $("#nBody").value = "";
+    /* 年级选项动态生成，并预选当前用户的注册年级 */
+    const cats = window.CATS || DATA.categories;
+    const me = window.AUTH && window.AUTH.user;
+    const sel = $("#nCat");
+    sel.innerHTML = cats.map((c) => `<option value="${c.id}">${c.label}</option>`).join("");
+    if (me && me.grade && cats.some((c) => c.id === +me.grade)) sel.value = me.grade;
+    /* 推荐标签：点选填入/移出 */
+    const sugg = $("#tagSugg");
+    if (sugg) {
+      const sync = () => {
+        const cur = $("#nTags").value.trim().split(/[\s,，]+/).filter(Boolean);
+        sugg.querySelectorAll(".tag-sg").forEach((b) =>
+          b.classList.toggle("on", cur.includes(b.dataset.t)));
+      };
+      sugg.innerHTML = SUGGESTED_TAGS.map((t) => `<button type="button" class="tag-sg" data-t="${t}">${t}</button>`).join("");
+      sugg.querySelectorAll(".tag-sg").forEach((b) => b.addEventListener("click", () => {
+        const input = $("#nTags");
+        const cur = input.value.trim().split(/[\s,，]+/).filter(Boolean);
+        const i = cur.indexOf(b.dataset.t);
+        if (i >= 0) cur.splice(i, 1);
+        else if (cur.length < 4) cur.push(b.dataset.t);
+        input.value = cur.join(" ");
+        sync();
+      }));
+      $("#nTags").value = "";
+      sync();
+    }
     mask.classList.add("open");
     $("#nTitle").focus();
   }
@@ -307,6 +338,7 @@
 
   /* ============ 列表页 ============ */
   if (page === "index") (async () => {
+    await loadCats();
     try { window.SERVER_TOPICS = await (await fetch("/api/topics")).json(); } catch {}
     let sort = qs("sort") || "latest";
     let fCat = +qs("cat") || null;
@@ -429,6 +461,7 @@
   /* ============ 话题页 ============ */
   if (page === "topic") (async () => {
     const root = $("#topicRoot");
+    await loadCats();
     try {
       window.SERVER_TOPICS = await (await fetch("/api/topics")).json();
       window.SERVER_REPLIES = window.SERVER_REPLIES || {};
