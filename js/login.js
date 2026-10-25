@@ -67,13 +67,14 @@
     $("#altRow").innerHTML = m === "login"
       ? '没有账号？<a id="lnkRegister">点击这里去注册&gt;&gt;</a>'
       : '已有账号？<a id="lnkBack2">去登录&gt;&gt;</a>';
-    $("#lnkRegister").addEventListener("click", () => setMode("register"));
-    $("#lnkBack2").addEventListener("click", () => setMode("login"));
+    $("#lnkRegister")?.addEventListener("click", () => setMode("register"));
+    $("#lnkBack2")?.addEventListener("click", () => setMode("login"));
     $("#authErr").textContent = "";
   }
 
   const qp = new URLSearchParams(location.search).get("mode");
   setMode(qp === "register" || qp === "reset" ? qp : "login");
+  $("#lnkForgot").addEventListener("click", () => setMode("reset"));
   $("#lnkBack").addEventListener("click", () => setMode("login"));
 
   /* ---------- 发送验证码（60 秒冷却） ---------- */
