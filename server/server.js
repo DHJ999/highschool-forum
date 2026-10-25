@@ -228,6 +228,45 @@ app.get("/api/site/stats", (req, res) => {
   });
 });
 
+/* ---------- 赞一个（用户获赞，可取消；每天最多收 10 个） ---------- */
+app.get("/api/users/:id/likes", (req, res) => {
+  const target = db.users.find((u) => u.id === +req.params.id);
+  if (!target) return res.status(404).json({ error: "用户不存在" });
+  const me = currentUser(req);
+  const likes = likeCountOf(target.id);
+  const lv = levelOf(likes);
+  res.json({
+    likes,
+    lv: lv.lv,
+    title: lv.title,
+    likedByMe: me ? ((db.userLikes || {})[target.id] || []).includes(me.id) : false,
+  });
+});
+app.post("/api/users/:id/like", (req, res) => {
+  const me = currentUser(req);
+  if (!me) return res.status(401).json({ error: "请先登录" });
+  const target = db.users.find((u) => u.id === +req.params.id);
+  if (!target || target.id === me.id) return res.status(400).json({ error: "无法操作" });
+  db.userLikes = db.userLikes || {};
+  const list = (db.userLikes[target.id] = db.userLikes[target.id] || []);
+  const i = list.indexOf(me.id);
+  if (i >= 0) {
+    list.splice(i, 1);
+    store.save();
+    return res.json({ ok: true, liked: false, likes: list.length });
+  }
+  /* 每天收到的赞上限 10 个（取消不返还当日额度，防刷） */
+  const today = new Date().toLocaleDateString("sv");
+  db.userLikesDaily = db.userLikesDaily || {};
+  const d = (db.userLikesDaily[target.id] = db.userLikesDaily[target.id] || {});
+  if (d.date !== today) { d.date = today; d.count = 0; }
+  if (d.count >= 10) return res.status(403).json({ error: "TA 今天收到的赞已达上限（每天最多 10 个）" });
+  list.push(me.id);
+  d.count = (d.count || 0) + 1;
+  store.save();
+  res.json({ ok: true, liked: true, likes: list.length });
+});
+
 /* ---------- 通知 ---------- */
 function notifyTo(toUid, fromUser, text, topicId, type) {
   if (toUid === fromUser.id) return; /* 自己的操作不通知自己 */
@@ -567,6 +606,20 @@ app.get("/api/me", (req, res) => {
 
 /* ================= 话题 / 回复 API ================= */
 
+/* 用户获赞等级头衔：累计获赞越多头衔越高 */
+const LV_TABLE = [
+  [0, "Lv1", "社区萌新"], [10, "Lv2", "初露锋芒"], [50, "Lv3", "活跃达人"],
+  [100, "Lv4", "人气用户"], [200, "Lv5", "核心红人"], [300, "Lv6", "意见领袖"],
+  [500, "Lv7", "论坛元老"], [800, "Lv8", "资深元老"], [1000, "Lv9", "殿堂级大神"],
+];
+const levelOf = (n) => {
+  let row = LV_TABLE[0];
+  for (const r of LV_TABLE) if (n >= r[0]) row = r;
+  return { lv: row[1], title: row[2] };
+};
+/* 某用户累计获得的「赞一个」数量 */
+const likeCountOf = (uid) => ((db.userLikes || {})[uid] || []).length;
+
 /* 某话题的回复列表（附评论人头像/年级/点赞数）——列表与详情两个接口共用，保证数字同源 */
 const repliesOfId = (tid) => {
   const gradeOf = (uid) => {
@@ -576,7 +629,9 @@ const repliesOfId = (tid) => {
   const lc = (db.likes || {})[tid] || {};
   return (db.replies[tid] || []).map((r) => {
     const ru = r.uid ? db.users.find((x) => x.id === r.uid) : null;
-    return { ...r, avatar: ru ? (ru.avatar || null) : null, grade: r.uid ? gradeOf(r.uid) : null, likeCount: lc[r.id] ? lc[r.id].length : 0 };
+    const ul = r.uid ? likeCountOf(r.uid) : 0;
+    const lv = levelOf(ul);
+    return { ...r, avatar: ru ? (ru.avatar || null) : null, grade: r.uid ? gradeOf(r.uid) : null, likeCount: lc[r.id] ? lc[r.id].length : 0, uLikes: ul, uLv: lv.lv, uTitle: lv.title };
   });
 };
 
@@ -586,10 +641,15 @@ app.get("/api/topics", (req, res) => {
   db.viewCounts = db.viewCounts || {};
   res.json(db.topics.map((t) => {
     const u = t.uid ? db.users.find((x) => x.id === t.uid) : null;
+    const al = u ? likeCountOf(u.id) : 0;
+    const alv = u ? levelOf(al) : { lv: "Lv1", title: "社区萌新" };
     return {
       ...t,
       authorGrade: u ? (u.grade ?? null) : null,
       authorAvatar: u ? (u.avatar || null) : null,
+      authorLikes: al,
+      authorLv: alv.lv,
+      authorTitle: alv.title,
       likeCount: (db.likes[t.id] && db.likes[t.id].op) ? db.likes[t.id].op.length : 0,
       viewCount: db.viewCounts[t.id] || 0,
       repliesData: repliesOfId(t.id),
@@ -818,6 +878,11 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
   db.topics = db.topics.filter((t) => t.uid !== id);
   for (const k of Object.keys(db.replies)) db.replies[k] = db.replies[k].filter((r) => r.uid !== id);
   for (const [tk, s] of Object.entries(db.sessions)) if (s.uid === id) delete db.sessions[tk];
+  if (db.userLikes) {
+    delete db.userLikes[id];
+    for (const k of Object.keys(db.userLikes)) db.userLikes[k] = db.userLikes[k].filter((x) => x !== id);
+  }
+  if (db.userLikesDaily) delete db.userLikesDaily[id];
   store.save();
   res.json({ ok: true });
 });

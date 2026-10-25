@@ -427,6 +427,16 @@ html[data-theme="light"] {
   font-size: 11px; color: var(--muted); background: var(--card);
   border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; line-height: 1.5;
 }
+/* 获赞等级头衔 */
+.lv-badge {
+  font-size: 11px; line-height: 1.5; padding: 0 6px; border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-strong); font-weight: 600;
+}
+/* 作者卡「赞一个 / 私信」横排 */
+.rail-btns.author-acts { flex-direction: row; }
+.rail-btns.author-acts .btn { width: auto; flex: 1; justify-content: center; text-align: center; }
+#railULike.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .rbox { display: flex; flex-direction: column; gap: 8px; margin: 8px 20px 12px; }
 .rbox textarea {
   width: 100%; background: var(--card); border: 1px solid var(--border);

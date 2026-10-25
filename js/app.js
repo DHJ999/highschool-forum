@@ -184,11 +184,12 @@
         <h4>作者</h4>
         <div class="rail-user-head">
           ${avatar(a.author, a.color, "", a.authorAvatar)}
-          <div><b>${esc(a.author)}</b><span>${catById(a.category) ? catById(a.category).label : ""}</span></div>
+          <div><b>${esc(a.author)}</b><span>${catById(a.category) ? catById(a.category).label : ""}${a.authorTitle ? ` · <span id="railLvBadge">${a.authorLv} ${a.authorTitle}</span>` : ""}</span></div>
         </div>
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 4px">发布于 ${fmtTime(a.created)}</p>
         ${me && a.uid && a.uid !== me.id ? `
-        <div class="rail-btns" style="margin-top:8px">
+        <div class="rail-btns author-acts" style="margin-top:8px">
+          <button class="btn btn-ghost" id="railULike" data-uid="${a.uid}">👍 赞一个</button>
           <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 私信</a>
         </div>` : ""}
       </div>`;
@@ -228,6 +229,26 @@
           b.textContent = t > 99 ? "99+" : String(t);
         }
       } catch {}
+    }
+    /* 作者卡「赞一个」：读取获赞状态，点击切换（每人一票，可取消；每天收到上限 10 个） */
+    const ub = rail.querySelector("#railULike");
+    if (ub) {
+      const setLike = (d) => {
+        ub.innerHTML = `👍 赞一个 <b>${d.likes}</b>`;
+        ub.classList.toggle("on", !!(d.liked ?? d.likedByMe));
+        const lvEl = rail.querySelector("#railLvBadge");
+        if (lvEl && d.lv) lvEl.textContent = `${d.lv} ${d.title}`;
+      };
+      fetch(`/api/users/${ub.dataset.uid}/likes`).then((r) => r.json()).then(setLike).catch(() => {});
+      ub.addEventListener("click", async () => {
+        try {
+          const r = await fetch(`/api/users/${ub.dataset.uid}/like`, { method: "POST" });
+          const d = await r.json();
+          if (!r.ok) return toast(d.error || "操作失败");
+          setLike(d);
+          toast(d.liked ? "已赞" : "已取消赞");
+        } catch { toast("操作失败"); }
+      });
     }
   }
   window.__renderRail = renderRail;
@@ -488,8 +509,9 @@
         const replyImgs = (r) => (r.images && r.images.length)
           ? `<div class="c-imgs">${r.images.map((u) => `<img class="c-img" src="${u}" alt="图片" loading="lazy">`).join("")}</div>` : "";
 
-        /* 评论行（bbs-go 扁平风）：楼主徽章 + 年级头衔 + 删除（本人/帖主/管理员）；私信入口只在右侧作者卡 */
+        /* 评论行（bbs-go 扁平风）：楼主徽章 + 获赞头衔 + 年级头衔 + 删除（本人/帖主/管理员）；私信入口只在右侧作者卡 */
         const gradeBadge = (g) => g ? `<span class="grade-badge">${g}</span>` : "";
+        const lvBadge = (r) => r.uTitle ? `<span class="lv-badge">${r.uLv} ${r.uTitle}</span>` : "";
         const replyHTML = (r, isChild) => {
           const isOp = (r.uid && r.uid === t.uid) || (!r.uid && r.user === t.author);
           const canDel = meNow && ((r.uid && r.uid === meNow.id) || (t.uid && t.uid === meNow.id) || meNow.role === "admin");
@@ -501,6 +523,7 @@
               <div class="cmt-head">
                 <b>${esc(r.user)}</b>
                 ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
+                ${lvBadge(r)}
                 ${gradeBadge(grade)}
                 <time>${fmtTime(r.time)}</time>
               </div>
@@ -526,7 +549,7 @@
             <div class="pc-head">
               ${avatar(t.author, t.color, "", t.authorAvatar)}
               <div class="pc-who">
-                <b>${esc(t.author)}</b>${gradeBadge(mainGrade)}
+                <b>${esc(t.author)}</b>${t.authorTitle ? `<span class="lv-badge">${t.authorLv} ${t.authorTitle}</span>` : ""}${gradeBadge(mainGrade)}
                 <time>发布于 ${fmtTime(t.created)}</time>
               </div>
               ${canDelTopic ? '<button class="btn btn-ghost btn-sm" id="delTopic">🗑 删除</button>' : ""}
