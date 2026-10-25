@@ -126,6 +126,7 @@
               <button type="button" class="btn btn-ghost btn-sm" id="avReset" ${u.avatar ? "" : "hidden"}>↺ 恢复默认</button>
             </div>
             <input type="file" id="avInput" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+            <p class="av-hint" id="avHint" hidden></p>
           </div>
         </div>
         <div class="field"><label>头像颜色（未上传图片时生效）</label>
@@ -148,7 +149,7 @@
       m.querySelectorAll(".swatch").forEach((x) => x.classList.toggle("on", x === s));
     }));
 
-    /* 头像上传：压缩成正方形后立即生效 */
+    /* 头像上传：选图后仅本地预览，点“保存”才上传生效 */
     const compressSquare = (file) => new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -164,57 +165,61 @@
       img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
       img.src = url;
     });
+    let pending = null;   /* 待保存的新头像 dataURL */
+    let removing = false; /* 待保存的“恢复默认”操作 */
+    const pv = m.querySelector("#avPreview");
+    const hint = m.querySelector("#avHint");
+
     m.querySelector("#avUpload").addEventListener("click", () => m.querySelector("#avInput").click());
     m.querySelector("#avInput").addEventListener("change", async (e) => {
       const f = e.target.files[0];
       e.target.value = "";
       if (!f) return;
-      notify("头像上传中…");
       const blob = await compressSquare(f);
       if (!blob) { m.querySelector("#peErr").textContent = "图片读取失败"; return; }
-      const dataUrl = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-      try {
-        const r = await fetch("/api/me/avatar", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: dataUrl }),
-        });
-        const d = await r.json();
-        if (!r.ok) { m.querySelector("#peErr").textContent = d.error || "上传失败"; return; }
-        window.AUTH.user.avatar = d.avatar;
-        const pv = m.querySelector("#avPreview");
-        pv.innerHTML = `<img src="${esc(d.avatar)}" alt="">`;
-        m.querySelector("#avReset").hidden = false;
-        notify("头像已更新");
-      } catch { m.querySelector("#peErr").textContent = "上传失败"; }
+      pending = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+      removing = false;
+      pv.innerHTML = `<img src="${pending}" alt="">`;
+      pv.classList.add("pending");
+      hint.hidden = false;
+      hint.textContent = "已选择新头像，点击下方「保存」后生效";
+      m.querySelector("#peErr").textContent = "";
     });
-    m.querySelector("#avReset").addEventListener("click", async () => {
-      try {
-        const r = await fetch("/api/me/profile", {
-          method: "PATCH", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ avatar: null }),
-        });
-        if (!r.ok) { m.querySelector("#peErr").textContent = "操作失败"; return; }
-        window.AUTH.user.avatar = null;
-        const pv = m.querySelector("#avPreview");
-        pv.innerHTML = esc(u.nickname[0]);
-        m.querySelector("#avReset").hidden = true;
-        notify("已恢复默认头像");
-      } catch { m.querySelector("#peErr").textContent = "操作失败"; }
+    m.querySelector("#avReset").addEventListener("click", () => {
+      pending = null;
+      removing = true;
+      pv.innerHTML = esc(u.nickname[0]);
+      pv.classList.remove("pending");
+      hint.hidden = false;
+      hint.textContent = "保存后将恢复默认头像";
+      m.querySelector("#avReset").hidden = true;
     });
     m.querySelector("#peCancel").addEventListener("click", () => m.remove());
     m.addEventListener("click", (e) => { if (e.target === m) m.remove(); });
     m.querySelector("#profEditForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const r = await fetch("/api/me/profile", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: m.querySelector("#peNick").value.trim(), color: picked }),
-      });
-      const d = await r.json();
-      if (!r.ok) { m.querySelector("#peErr").textContent = d.error || "保存失败"; return; }
-      window.AUTH.user = d.user;
-      notify("资料已更新");
-      m.remove();
-      renderArea();
+      try {
+        if (pending) {
+          const r = await fetch("/api/me/avatar", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: pending }),
+          });
+          const d = await r.json();
+          if (!r.ok) { m.querySelector("#peErr").textContent = d.error || "头像上传失败"; return; }
+        }
+        const body = { nickname: m.querySelector("#peNick").value.trim(), color: picked };
+        if (removing) body.avatar = null;
+        const r = await fetch("/api/me/profile", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!r.ok) { m.querySelector("#peErr").textContent = d.error || "保存失败"; return; }
+        window.AUTH.user = d.user;
+        notify("资料已更新");
+        m.remove();
+        renderArea();
+      } catch { m.querySelector("#peErr").textContent = "保存失败"; }
     });
   }
 
