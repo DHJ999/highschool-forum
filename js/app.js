@@ -158,7 +158,6 @@
           <div><b>${my.r}</b><span>回复</span></div>
         </div>
         <div class="rail-btns">
-          <a class="btn btn-primary" href="#" data-act="new">✏️ 发布帖子</a>
           <a class="btn btn-ghost" href="me.html">👤 个人中心</a>
           <a class="btn btn-ghost" href="messages.html">✉ 私信</a>
           ${me.role === "admin" ? '<a class="btn btn-ghost" href="admin.html">⚙ 管理后台</a>' : ""}
@@ -258,110 +257,13 @@
   }
   bindTopbar();
 
-  /* 发布帖子弹窗（仅 index 页）：#话题 输入 + 预选下拉（抖音式） */
-  function allTagsWithCount() {
-    const cnt = {};
-    allTopics().forEach((t) => t.tags.forEach((g) => { cnt[g] = (cnt[g] || 0) + 1; }));
-    return Object.entries(cnt).sort((a, b) => b[1] - a[1]);
-  }
-  function parseTopics(val) {
-    return [...new Set([...String(val).matchAll(/#([^\s#,，]+)/g)].map((m) => m[1]))].slice(0, 5);
-  }
-  function openComposer() {
-    const mask = $("#newMask");
-    if (!mask) return;
-    $("#nTitle").value = "";
-    $("#nTopics").value = "";
-    $("#nBody").value = "";
-    bindTopicInput();
-    mask.classList.add("open");
-    $("#nTitle").focus();
-  }
-  function bindTopicInput() {
-    const input = $("#nTopics");
-    const pop = $("#topicPop");
-    if (!input || input.dataset.bound) return;
-    input.dataset.bound = "1";
-
-    const hide = () => pop.classList.remove("open");
-    const currentQuery = () => {
-      const v = input.value;
-      const idx = v.lastIndexOf("#");
-      if (idx === -1) return null;
-      const rest = v.slice(idx + 1);
-      return /[\s#]/.test(rest) ? null : rest;
-    };
-    const renderPop = () => {
-      const q = currentQuery();
-      if (q === null) { hide(); return; }
-      const all = allTagsWithCount();
-      const starts = all.filter(([t]) => t.startsWith(q));
-      const contains = all.filter(([t]) => !t.startsWith(q) && t.includes(q));
-      const items = starts.concat(contains).slice(0, 6);
-      let html = items.map(([t, n]) =>
-        `<div class="topic-item" data-t="${esc(t)}"><span># ${esc(t)}</span><small>${n} 篇</small></div>`).join("");
-      if (q && !all.some(([t]) => t === q)) {
-        html += `<div class="topic-item create" data-t="${esc(q)}"><span>创建新话题「# ${esc(q)}」</span><small>新</small></div>`;
-      }
-      if (!html) html = '<div class="topic-item none">输入话题名称，或直接创建新话题</div>';
-      pop.innerHTML = html;
-      pop.classList.add("open");
-      $$(".topic-item[data-t]", pop).forEach((el) =>
-        el.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          const v = input.value;
-          const idx = v.lastIndexOf("#");
-          input.value = v.slice(0, idx + 1) + el.dataset.t + " ";
-          hide();
-          input.focus();
-        }));
-    };
-    input.addEventListener("input", renderPop);
-    input.addEventListener("focus", renderPop);
-    input.addEventListener("blur", () => setTimeout(hide, 150));
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") hide();
-    });
-  }
+  /* 发布帖子 → 独立页面（post.html），不再使用首页弹窗 */
   document.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="new"]') || e.target.closest("#btnNew")) {
       e.preventDefault();
-      openComposer();
+      location.href = "post.html";
     }
   });
-  const mask = $("#newMask");
-  if (mask) {
-    mask.addEventListener("click", (e) => {
-      if (e.target === mask || e.target.closest("[data-close]")) mask.classList.remove("open");
-    });
-    $("#newForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const me = window.AUTH && window.AUTH.user;
-      if (!me) {
-        mask.classList.remove("open");
-        toast("请先登录后再发帖");
-        window.openAuth("login");
-        return;
-      }
-      const title = $("#nTitle").value.trim();
-      const body = $("#nBody").value.trim();
-      if (!title || !body) return;
-      const tags = parseTopics($("#nTopics").value);
-      try {
-        const resp = await fetch("/api/topics", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, tags, body }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) { toast(data.error || "发布失败"); return; }
-        mask.classList.remove("open");
-        toast("帖子已发布");
-        location.href = "topic.html?id=" + data.topic.id;
-      } catch {
-        toast("后端未启动，无法发布");
-      }
-    });
-  }
 
   /* ============ 列表页 ============ */
   if (page === "index") (async () => {

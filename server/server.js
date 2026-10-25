@@ -435,7 +435,7 @@ app.post("/api/me/grade", (req, res) => {
   if (!user) return res.status(401).json({ error: "请先登录" });
   const g = Number((req.body || {}).grade);
   if (!Number.isInteger(g) || g < 1990 || g > 2026) return res.status(400).json({ error: "请选择入学年级（1990–2026）" });
-  if (user.gradeChanged) {
+  if (user.gradeChanged && user.role !== "admin") {
     return res.status(403).json({ error: "入学年级仅可自助修改一次，再次修改请联系管理员：your-email@example.com" });
   }
   user.grade = g;
@@ -477,7 +477,7 @@ app.get("/api/topics", (req, res) => {
 app.post("/api/topics", (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: "请先登录" });
-  const { title, tags, body } = req.body || {};
+  const { title, tags, body, images } = req.body || {};
   if (!title || !title.trim()) return res.status(400).json({ error: "标题不能为空" });
   if (!body || !String(body).trim()) return res.status(400).json({ error: "正文不能为空" });
   if (!user.grade) return res.status(400).json({ error: "请先在「个人设置」中选择你的入学年级（头衔），发帖会归入你的年级" });
@@ -489,7 +489,7 @@ app.post("/api/topics", (req, res) => {
     author: user.nickname, color: user.color, uid: user.id,
     created: Date.now(), pinned: false, views: 0, likes: 0,
     body: String(body).split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(0, 20),
-    images: [],
+    images: Array.isArray(images) ? images.filter((u) => /^\/uploads\//.test(u)).slice(0, 9) : [],
   };
   db.topics.unshift(topic);
   store.save();

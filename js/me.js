@@ -96,7 +96,7 @@
       </div>
 
       <div class="list-tabs me-tabs">
-        <button class="on" data-t="topics">我的话题（${topics.length}）</button>
+        <button class="on" data-t="topics">我发布的（${topics.length}）</button>
         <button data-t="replies">我的回复（${replies.length}）</button>
         <button data-t="favs">我的收藏（${favIds.length}）</button>
       </div>
@@ -120,7 +120,7 @@
           </div>
           <button class="act-btn link-danger" data-del-topic="${t.id}">删除</button>
         </div>`;
-      }).join("") : '<p class="me-empty">还没有发布过话题，<a href="index.html" style="color:var(--accent)">去写第一篇</a>。</p>';
+      }).join("") : '<p class="me-empty">还没有发布过帖子，<a href="index.html" style="color:var(--accent)">去写第一篇</a>。</p>';
 
       $$("#meTopics [data-del-topic]").forEach((b) => b.addEventListener("click", async () => {
         if (!confirm("确定删除这个话题及其全部回复？")) return;

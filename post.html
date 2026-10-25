@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布帖子 · 风华正茂</title>
+<link rel="stylesheet" href="css/style.css?v=15">
+</head>
+<body data-page="post">
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><b>风华正茂</b><span>发布帖子</span></a>
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="index.html">← 返回</a>
+      <span id="authArea" style="display:flex;gap:10px;align-items:center"></span>
+      <button class="icon-btn" id="btnTheme" title="切换深浅色">◐</button>
+    </div>
+  </div>
+</header>
+
+<div class="pf-wrap" id="pfRoot">
+  <form class="modal pf-card" id="pfForm">
+    <h3>发布帖子</h3>
+    <p class="pf-head-tip" id="pfTip">帖子会自动归入你的年级（头衔）</p>
+    <div class="field"><label>标题</label>
+      <input id="nTitle" required maxlength="60" placeholder="用一句话概括那段回忆"></div>
+    <div class="field topic-field"><label>话题（输入 # 关联话题，最多 5 个）</label>
+      <input id="nTopics" placeholder="输入 # 添加话题，如 #军训 #毕业" autocomplete="off">
+      <div class="topic-pop" id="topicPop"></div>
+    </div>
+    <div class="field"><label>正文</label>
+      <textarea id="nBody" rows="9" required placeholder="把它写下来，讲给当年的我们听……"></textarea></div>
+    <div class="field"><label>图片（最多 9 张，每张 ≤3MB）</label>
+      <div class="stage-row" id="stageRow"></div>
+      <button type="button" class="btn btn-ghost" id="btnImgs">📷 添加图片</button>
+      <input type="file" id="imgInput" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+    </div>
+    <p class="auth-err" id="pfErr"></p>
+    <div class="foot">
+      <a class="btn btn-ghost" href="index.html">取消</a>
+      <button type="submit" class="btn btn-primary" id="pfSubmit">发布帖子</button>
+    </div>
+  </form>
+</div>
+
+<script src="js/data.js?v=15"></script>
+<script src="js/auth.js?v=15"></script>
+<script src="js/post.js?v=15"></script>
+</body>
+</html>
