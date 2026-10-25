@@ -394,7 +394,8 @@ html[data-theme="light"] {
 .cmt { display: flex; gap: 12px; padding: 14px 0; border-top: 1px dashed var(--border); }
 .cmt .avatar { width: 34px; height: 34px; font-size: 14px; flex: none; margin-top: 2px; }
 .cmt-main { flex: 1; min-width: 0; }
-.cmt-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.cmt-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.cmt-head > * { white-space: nowrap; }
 .cmt-head b { font-size: 13.5px; }
 .cmt-head time { font-size: 12px; color: var(--muted); }
 .cmt-text { margin: 0 0 6px; font-size: 14.5px; line-height: 1.75; white-space: pre-wrap; }
@@ -427,6 +428,8 @@ html[data-theme="light"] {
   font-size: 11px; color: var(--muted); background: var(--card);
   border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; line-height: 1.5;
 }
+/* 徽章一律不内部断行：窄屏时整枚换行而不是把文字拆开 */
+.p-op-badge, .lv-badge, .grade-badge { white-space: nowrap; }
 /* 获赞等级头衔 */
 .lv-badge {
   font-size: 11px; line-height: 1.5; padding: 0 6px; border-radius: 4px;
@@ -556,6 +559,19 @@ html[data-theme="light"] {
   .auth-user { padding: 4px 6px; }
   .msg-link { padding: 7px 9px; font-size: 13px; }
   .top-actions .btn-accent { padding: 7px 9px; }
+  /* 评论头部：间距收紧，楼中楼缩进减小；年级徽章让位给头衔，保持单行 */
+  .cmt-head { gap: 5px 6px; }
+  .cmt-head .grade-badge { display: none; }
+  .cmt.child { margin-left: 22px; }
+}
+
+/* 超窄屏（≤420px）：消息按钮只留图标+红点，顶栏再收紧 */
+@media (max-width: 420px) {
+  .topbar-inner { gap: 6px; }
+  .top-actions { gap: 5px; }
+  .top-actions .btn-accent { padding: 7px 7px; font-size: 12.5px; }
+  .msg-link .msg-txt { display: none; }
+  .brand b { font-size: 16px; }
 }
 
 /* ---------- 登录 / 注册 ---------- */

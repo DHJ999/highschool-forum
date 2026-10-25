@@ -54,7 +54,7 @@
     const u = window.AUTH.user;
     if (u) {
       area.innerHTML = `
-        <a class="btn btn-ghost msg-link" href="messages.html" title="消息">✉ 消息<span class="cnt-badge" id="msgBadge" hidden></span></a>
+        <a class="btn btn-ghost msg-link" href="messages.html" title="消息">✉ <span class="msg-txt">消息</span><span class="cnt-badge" id="msgBadge" hidden></span></a>
         <div class="user-menu" id="userMenu">
           <button class="auth-user" id="btnAvatar" title="个人菜单">
             <span class="avatar" style="--c:${u.color}">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(u.nickname[0])}</span>
