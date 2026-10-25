@@ -147,7 +147,7 @@
         </div>
         <div class="rail-btns">
           <a class="btn btn-ghost" href="me.html">👤 个人中心</a>
-          <a class="btn btn-ghost" href="messages.html">✉ 消息</a>
+          <a class="btn btn-ghost rail-msg-link" href="messages.html">✉ 消息<span class="cnt-badge" id="railMsgBadge" hidden></span></a>
           ${me.role === "admin" ? '<a class="btn btn-ghost" href="admin.html">⚙ 管理后台</a>' : ""}
         </div>
       </div>`;
@@ -202,6 +202,18 @@
     }
 
     rail.innerHTML = html;
+    /* 右栏消息按钮未读角标（与顶栏同一数据源） */
+    if (me) {
+      try {
+        const d = await (await fetch("/api/me/unread-count")).json();
+        const b = rail.querySelector("#railMsgBadge");
+        if (b) {
+          const t = d.total || 0;
+          b.hidden = t === 0;
+          b.textContent = t > 99 ? "99+" : String(t);
+        }
+      } catch {}
+    }
     /* 作者卡关注按钮 */
     const rf = rail.querySelector("#railFollow");
     rf?.addEventListener("click", async () => {
