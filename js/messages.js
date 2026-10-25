@@ -1,6 +1,6 @@
 /* ============================================================
  * 风华正茂 —— 私信
- * 规则：互相关注畅聊；未互关时，对方回复前只能发一条
+ * 规则：对方回复你之前只能发送一条；对方回复后即可一直畅聊
  * ============================================================ */
 (function () {
   "use strict";
@@ -41,14 +41,13 @@
   const chatBox = $("#chat");
   let openUid = null;
   let pollTimer = null;
-  /* ---------- 会话列表：普通会话 + 分组合集（点赞/回复/收藏通知、陌生人、新的关注） ---------- */
+  /* ---------- 会话列表：普通会话 + 分组合集（点赞/回复/收藏通知） ---------- */
   async function loadContacts() {
-    let contacts = [], notes = { list: [], unread: 0 }, followers = [];
+    let contacts = [], notes = { list: [], unread: 0 };
     try {
-      [contacts, notes, followers] = await Promise.all([
+      [contacts, notes] = await Promise.all([
         fetch("/api/messages/contacts").then((r) => r.json()),
         fetch("/api/me/notifications").then((r) => r.json()),
-        fetch("/api/me/followers").then((r) => r.json()).catch(() => []),
       ]);
     } catch { return; }
     if (!Array.isArray(contacts)) contacts = [];
@@ -59,7 +58,7 @@
       <div class="contact${c.id === openUid ? " on" : ""}" data-uid="${c.id}">
         <span class="avatar" style="--c:${c.color}">${c.avatar ? `<img src="${esc(c.avatar)}" alt="">` : esc(c.nickname[0])}</span>
         <div class="c-main">
-          <div class="c-line"><b>${esc(c.nickname)}</b>${c.mutual ? '<span class="chip mutual">互关</span>' : ""}</div>
+          <div class="c-line"><b>${esc(c.nickname)}</b></div>
           <p class="c-last">${c.lastFromMe ? "我：" : ""}${esc(c.last)}</p>
         </div>
         <div class="c-side">
@@ -68,9 +67,7 @@
         </div>
       </div>`;
 
-    /* 分组：普通会话（互关或我已回复过）；其余进合集 */
-    const normal = contacts.filter((c) => c.mutual || c.iSent);
-    const strangers = contacts.filter((c) => !(c.mutual || c.iSent));
+    /* 分组：会话按时间排序展示；通知按类型归组成合集 */
     const groupByUser = (list) => {
       const map = new Map();
       for (const n of list) {
@@ -96,19 +93,10 @@
     const favNotes = groupByUser(notifList.filter((n) => n.type === "fav"));
 
     let html = "";
-    html += normal.length ? normal.map(contactRow).join("") : "";
+    html += contacts.map(contactRow).join("");
     html += notifGroup("❤ 点赞消息", likeNotes);
     html += notifGroup("💬 回复消息", replyNotes);
     html += notifGroup("⭐ 收藏消息", favNotes);
-    html += strangers.length ? `<div class="group-head">👤 陌生人</div>${strangers.map(contactRow).join("")}` : "";
-    html += followers.length ? `<div class="group-head">🔔 新的关注</div>${followers.map((f) => `
-      <div class="contact" data-uid="${f.id}">
-        <span class="avatar" style="--c:${f.color}">${esc(f.nickname[0])}</span>
-        <div class="c-main">
-          <div class="c-line"><b>${esc(f.nickname)}</b><span class="chip">新关注</span></div>
-          <p class="c-last">关注了你，点击开始交流</p>
-        </div>
-      </div>`).join("")}` : "";
     contactsBox.innerHTML = html || '<p class="c-empty">还没有会话与互动。去话题页找同学「✉ 消息」吧。</p>';
 
     /* 消息按钮角标：私信未读 + 通知未读 */
@@ -135,7 +123,7 @@
         <span class="avatar" style="--c:${u.color}">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(u.nickname[0])}</span>
         <div class="chat-title">
           <b>${esc(u.nickname)}</b>
-          <span>${u.grade ? u.grade + " 级" : ""}${data.mutual ? " · 互相关注" : ""}</span>
+          <span>${u.grade ? u.grade + " 级" : ""}</span>
         </div>
         <button class="btn btn-ghost btn-sm" id="chatBack">← 会话</button>
       </div>
@@ -146,8 +134,8 @@
           <button class="btn btn-primary" id="btnSend">发送</button>
         </div>
         ${data.canSend
-          ? (data.mutual ? "" : '<p class="chat-hint">你们还未互相关注：对方回复前你只能发送一条消息</p>')
-          : '<p class="chat-hint locked">🔒 等待对方回复后才能继续发送；互相关注后可以畅聊</p>'}
+          ? '<p class="chat-hint">对方回复你之前，你只能发送一条消息</p>'
+          : '<p class="chat-hint locked">🔒 等待对方回复后才能继续发送</p>'}
       </div>`;
 
     renderMsgs(data.messages, me.id);
@@ -174,8 +162,8 @@
         if (!d.canSend) {
           input.disabled = true; $("#btnSend").disabled = true;
           const hint = chatBox.querySelector(".chat-hint");
-          if (hint) { hint.classList.add("locked"); hint.textContent = "🔒 等待对方回复后才能继续发送；互相关注后可以畅聊"; }
-          else chatBox.querySelector(".chat-foot").insertAdjacentHTML("beforeend", '<p class="chat-hint locked">🔒 等待对方回复后才能继续发送；互相关注后可以畅聊</p>');
+          if (hint) { hint.classList.add("locked"); hint.textContent = "🔒 等待对方回复后才能继续发送"; }
+          else chatBox.querySelector(".chat-foot").insertAdjacentHTML("beforeend", '<p class="chat-hint locked">🔒 等待对方回复后才能继续发送</p>');
         }
       } finally {
         if (canSendLocal()) $("#btnSend").disabled = false;

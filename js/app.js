@@ -189,8 +189,7 @@
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 4px">发布于 ${fmtTime(a.created)}</p>
         ${me && a.uid && a.uid !== me.id ? `
         <div class="rail-btns" style="margin-top:8px">
-          <button class="btn btn-primary" id="railFollow" data-uid="${a.uid}">＋ 关注</button>
-          <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 消息</a>
+          <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 私信</a>
         </div>` : ""}
       </div>`;
     }
@@ -230,18 +229,6 @@
         }
       } catch {}
     }
-    /* 作者卡关注按钮 */
-    const rf = rail.querySelector("#railFollow");
-    rf?.addEventListener("click", async () => {
-      const r = await fetch(`/api/users/${rf.dataset.uid}/follow`, { method: "POST" });
-      const d = await r.json();
-      if (r.ok) {
-        rf.textContent = d.following ? "✓ 已关注" : "＋ 关注";
-        rf.classList.toggle("btn-primary", !d.following);
-        rf.classList.toggle("btn-ghost", d.following);
-        toast(d.following ? "已关注" : "已取消关注");
-      } else toast(d.error || "操作失败");
-    });
   }
   window.__renderRail = renderRail;
 

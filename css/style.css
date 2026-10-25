@@ -669,7 +669,6 @@ button.auth-user:hover { background: var(--hover); }
 .topic-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .btn-sm { padding: 5px 14px; font-size: 13px; }
 .topic-actions-hint { font-size: 12.5px; color: var(--muted); }
-.chip.mutual { color: var(--accent-strong); border-color: var(--accent); }
 
 /* ---------- 私信 ---------- */
 .msg-wrap {

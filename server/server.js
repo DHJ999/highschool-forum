@@ -228,34 +228,6 @@ app.get("/api/site/stats", (req, res) => {
   });
 });
 
-/* ---------- 关注 ---------- */
-app.post("/api/users/:id/follow", (req, res) => {
-  const me = currentUser(req);
-  if (!me) return res.status(401).json({ error: "请先登录" });
-  const target = db.users.find((u) => u.id === +req.params.id);
-  if (!target || target.id === me.id) return res.status(400).json({ error: "无法关注" });
-  db.follows = db.follows || {};
-  const list = (db.follows[me.id] = db.follows[me.id] || []);
-  const i = list.indexOf(target.id);
-  if (i >= 0) { list.splice(i, 1); store.save(); return res.json({ ok: true, following: false }); }
-  list.push(target.id);
-  store.save();
-  res.json({ ok: true, following: true });
-});
-app.get("/api/users/:id/relation", (req, res) => {
-  const me = currentUser(req);
-  const id = +req.params.id;
-  const target = db.users.find((u) => u.id === id);
-  if (!target) return res.status(404).json({ error: "用户不存在" });
-  db.follows = db.follows || {};
-  const following = me ? (db.follows[me.id] || []).includes(id) : false;
-  const followedBy = me ? (db.follows[id] || []).includes(me.id) : false;
-  res.json({
-    user: { id: target.id, nickname: target.nickname, color: target.color, grade: target.grade ?? null },
-    following, followedBy, mutual: following && followedBy,
-  });
-});
-
 /* ---------- 通知 ---------- */
 function notifyTo(toUid, fromUser, text, topicId, type) {
   if (toUid === fromUser.id) return; /* 自己的操作不通知自己 */
@@ -331,18 +303,6 @@ app.get("/api/me/unread-count", (req, res) => {
   }
   res.json({ dm, notif, total: dm + notif });
 });
-/* 关注我的人（未互关的 = 新的关注） */
-app.get("/api/me/followers", (req, res) => {
-  const user = currentUser(req);
-  if (!user) return res.status(401).json({ error: "请先登录" });
-  db.follows = db.follows || {};
-  res.json((db.follows[user.id] || []).map((uid) => {
-    const u = db.users.find((x) => x.id === uid);
-    if (!u) return null;
-    const mutual = (db.follows[uid] || []).includes(user.id);
-    return { id: u.id, nickname: u.nickname, color: u.color, avatar: u.avatar || null, grade: u.grade ?? null, mutual };
-  }).filter(Boolean).filter((u) => !u.mutual));
-});
 app.post("/api/me/notifications/read", (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: "请先登录" });
@@ -410,17 +370,12 @@ app.post("/api/upload", (req, res) => {
 app.use("/uploads", express.static(UPLOAD_DIR));
 
 /* ---------- 私信 ---------- */
-function isMutual(a, b) {
-  db.follows = db.follows || {};
-  return (db.follows[a] || []).includes(b) && (db.follows[b] || []).includes(a);
-}
 function convOf(a, b) {
   return (db.messages || []).filter((m) =>
     (m.from === a && m.to === b) || (m.from === b && m.to === a));
 }
-/* 发送资格：互关畅聊；否则首个回复出现之前，发起方只能发一条 */
+/* 发送资格：对方回复你之前只能发送一条；对方回复后即可一直畅聊 */
 function canSend(uid, other) {
-  if (isMutual(uid, other)) return true;
   const conv = convOf(uid, other);
   return conv.length === 0 || conv.some((m) => m.from !== uid);
 }
@@ -446,8 +401,6 @@ app.get("/api/messages/contacts", (req, res) => {
       lastFromMe: m.from === me.id,
       time: m.time,
       unread: convOf(me.id, otherId).filter((x) => x.to === me.id && !x.read).length,
-      mutual: isMutual(me.id, otherId),
-      iSent: convOf(me.id, otherId).some((x) => x.from === me.id),
     };
   }).sort((a, b) => b.time - a.time);
   res.json(contacts);
@@ -462,7 +415,6 @@ app.get("/api/messages/:uid", (req, res) => {
   store.save();
   res.json({
     user: { id: u.id, nickname: u.nickname, color: u.color, grade: u.grade ?? null },
-    mutual: isMutual(me.id, other),
     canSend: canSend(me.id, other),
     messages: convOf(me.id, other).sort((a, b) => a.time - b.time),
   });
@@ -475,7 +427,7 @@ app.post("/api/messages/:uid", (req, res) => {
   const { text } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "消息不能为空" });
   if (!canSend(me.id, other)) {
-    return res.status(403).json({ error: "对方回复前你只能发送一条消息；互相关注后可以畅聊" });
+    return res.status(403).json({ error: "对方回复前只能发送一条消息，等待对方回复" });
   }
   db.messages = db.messages || [];
   const msg = {
@@ -486,7 +438,7 @@ app.post("/api/messages/:uid", (req, res) => {
   };
   db.messages.push(msg);
   store.save();
-  res.json({ ok: true, message: msg, mutual: isMutual(me.id, other), canSend: canSend(me.id, other) });
+  res.json({ ok: true, message: msg, canSend: canSend(me.id, other) });
 });
 
 /* 我的话题 / 我的回复 */
