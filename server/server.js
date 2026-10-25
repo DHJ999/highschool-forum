@@ -470,9 +470,12 @@ app.get("/api/me", (req, res) => {
 
 /* ================= 话题 / 回复 API ================= */
 
-/* 用户发布的话题（与内置示例数据在前端合并展示） */
+/* 用户发布的话题（与内置示例数据在前端合并展示）；附作者年级供头衔展示 */
 app.get("/api/topics", (req, res) => {
-  res.json(db.topics);
+  res.json(db.topics.map((t) => {
+    const u = t.uid ? db.users.find((x) => x.id === t.uid) : null;
+    return { ...t, authorGrade: u ? (u.grade ?? null) : null };
+  }));
 });
 /* 浏览计数：一个访客对同一帖子只 +1（登录按账号，游客按访客 Cookie） */
 app.post("/api/topics/:id/view", (req, res) => {
@@ -533,9 +536,15 @@ app.delete("/api/topics/:id", (req, res) => {
   res.json({ ok: true });
 });
 
-/* 回复（全部走服务端；内置话题的示例回复在前端合并展示） */
+/* 回复（全部走服务端；内置话题的示例回复在前端合并展示）；附评论人年级供头衔展示 */
 app.get("/api/topics/:id/replies", (req, res) => {
-  res.json(db.replies[req.params.id] || []);
+  const gradeOf = (uid) => {
+    const u = db.users.find((x) => x.id === uid);
+    return u ? (u.grade ?? null) : null;
+  };
+  res.json((db.replies[req.params.id] || []).map((r) => ({
+    ...r, grade: r.uid ? gradeOf(r.uid) : null,
+  })));
 });
 app.post("/api/topics/:id/replies", (req, res) => {
   const user = currentUser(req);
@@ -563,10 +572,21 @@ app.delete("/api/replies/:tid/:rid", (req, res) => {
   const list = db.replies[req.params.tid] || [];
   const r = list.find((x) => x.id === req.params.rid);
   if (!r) return res.status(404).json({ error: "回复不存在" });
-  if (!admin && r.uid !== user.id) return res.status(403).json({ error: "只能删除自己的回复" });
-  db.replies[req.params.tid] = list.filter((x) => x.id !== r.id);
+  const topic = db.topics.find((x) => x.id === req.params.tid);
+  const allowed = admin || (user && (r.uid === user.id || (topic && topic.uid === user.id)));
+  if (!allowed) return res.status(403).json({ error: "回复作者或帖子作者才能删除" });
+  /* 级联删除该评论的所有下级回复 */
+  const del = new Set([r.id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const x of list) {
+      if (!del.has(x.id) && x.parentId && del.has(x.parentId)) { del.add(x.id); grew = true; }
+    }
+  }
+  db.replies[req.params.tid] = list.filter((x) => !del.has(x.id));
   store.save();
-  res.json({ ok: true });
+  res.json({ ok: true, removed: del.size });
 });
 
 /* ================= 管理员 API ================= */

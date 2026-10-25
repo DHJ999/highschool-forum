@@ -233,7 +233,9 @@
   /* ---------- 公共区块 ---------- */
   const page = document.body.dataset.page;
 
-  /* 侧栏（两页共用） */
+  /* 侧栏（两页共用）：年级与标签只显示最火热的前 5 个（按帖子量排序）；
+     火苗按名次：第1名🔥🔥🔥、第2名🔥🔥、第3名🔥、第4/5名无 */
+  const firesByRank = (i) => (i === 0 ? "🔥🔥🔥" : i === 1 ? "🔥🔥" : i === 2 ? "🔥" : "");
   function renderSidebar(activeCat, activeTag) {
     const topics = allTopics();
     const catCount = (cid) => topics.filter((t) => t.category === cid).length;
@@ -242,14 +244,30 @@
     $("#sideTopics").innerHTML = `
       <a class="side-item ${!activeCat && !activeTag ? "active" : ""}" href="index.html">📋 全部话题</a>
       <a class="side-item" data-act="new">✏️ 发布帖子</a>`;
-    $("#sideCats").innerHTML = (window.CATS || DATA.categories).map((c) => `
+
+    /* 年级 Top5（按话题数）；当前筛选中的年级即使不在榜上也保留显示（无火苗） */
+    let catList = (window.CATS || DATA.categories)
+      .map((c) => ({ ...c, n: catCount(c.id) }))
+      .sort((a, b) => b.n - a.n || a.id - b.id)
+      .slice(0, 5);
+    if (activeCat && !catList.some((c) => c.id === activeCat)) {
+      const c = (window.CATS || DATA.categories).find((x) => x.id === activeCat);
+      if (c) catList.push({ ...c, n: catCount(c.id) });
+    }
+    $("#sideCats").innerHTML = catList.map((c, i) => `
       <a class="side-item ${activeCat === c.id ? "active" : ""}" href="index.html?cat=${c.id}">
-        <span class="cat-dot" style="background:${c.color}"></span>${c.label}
-        <span class="cnt">${catCount(c.id)}</span>
+        <span class="cat-dot" style="background:${c.color}"></span>${firesByRank(i)} ${c.label}
+        <span class="cnt">${c.n}</span>
       </a>`).join("");
-    $("#sideTags").innerHTML = Object.entries(tags).map(([g, n]) => `
+
+    /* 标签 Top5（按话题数）；当前筛选中的标签同样保留（无火苗） */
+    let tagList = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (activeTag && !tagList.some(([g]) => g === activeTag)) {
+      tagList.push([activeTag, tags[activeTag] || 0]);
+    }
+    $("#sideTags").innerHTML = tagList.map(([g, n], i) => `
       <a class="side-item ${activeTag === g ? "active" : ""}" href="index.html?tag=${encodeURIComponent(g)}">
-        <span class="tag-ic">#</span>${esc(g)}<span class="cnt">${n}</span>
+        <span class="tag-ic">#</span>${firesByRank(i)} ${esc(g)}<span class="cnt">${n}</span>
       </a>`).join("");
   }
 
@@ -436,6 +454,9 @@
       function render() {
         const rs = repliesOf(t);
         const cat = catById(t.category);
+        /* 图片归一化：兼容旧对象格式 {src,caption} 与新字符串格式 "/uploads/x.jpg" */
+        const tImgs = (t.images || []).map((m) =>
+          typeof m === "string" ? { src: m, caption: "" } : m);
         /* 楼中楼：稳定 _id（服务端回复用 id，内置示例用 b+序号），按 parentId 归组到顶层楼层 */
         rs.forEach((r, i) => { r._id = r.id || "b" + i; r._idx = i; });
         const parentOf = {};
@@ -458,23 +479,36 @@
         const replyImgs = (r) => (r.images && r.images.length)
           ? `<div class="c-imgs">${r.images.map((u) => `<img class="c-img" src="${u}" alt="图片" loading="lazy">`).join("")}</div>` : "";
 
-        /* 评论行（bbs-go 扁平风） */
-        const replyHTML = (r, isChild) => `
+        /* 评论行（bbs-go 扁平风）：楼主徽章 + 年级头衔 + 删除（本人/帖主/管理员） */
+        const gradeBadge = (g) => g ? `<span class="grade-badge">${g}</span>` : "";
+        const replyHTML = (r, isChild) => {
+          const isOp = (r.uid && r.uid === t.uid) || (!r.uid && r.user === t.author);
+          const canDel = meNow && ((r.uid && r.uid === meNow.id) || (t.uid && t.uid === meNow.id) || meNow.role === "admin");
+          const grade = r.grade ?? t.category;
+          return `
           <div class="cmt${isChild ? " child" : ""}" data-rid="${r._id}">
             ${avatar(r.user, r.color)}
             <div class="cmt-main">
-              <div class="cmt-head"><b>${esc(r.user)}</b><time>${fmtTime(r.time)}</time></div>
+              <div class="cmt-head">
+                <b>${esc(r.user)}</b>
+                ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
+                ${gradeBadge(grade)}
+                <time>${fmtTime(r.time)}</time>
+              </div>
               <p class="cmt-text">${esc(r.text)}</p>
               ${replyImgs(r)}
               <div class="cmt-actions">
                 <button class="act-btn act-like" data-k="${likeKey(r._idx)}">❤ <b>${likesFor(t, r._idx)}</b></button>
                 <button class="act-btn act-reply" data-rid="${r._id}" data-nick="${esc(r.user)}">💬 回复</button>
+                ${canDel ? `<button class="act-btn act-del" data-rid="${r._id}" title="删除（其下回复一并删除）">🗑 删除</button>` : ""}
               </div>
             </div>
           </div>
           <div class="rbox-slot" data-slot="${r._id}"></div>
           ${(kids[r._id] || []).map((c) => replyHTML(c, true)).join("")}`;
+        };
 
+        const mainGrade = t.authorGrade ?? t.category;
         root.innerHTML = `
           <header class="topic-head">
             <h1>${t.pinned ? "📌 " : ""}${esc(t.title)}</h1>
@@ -482,12 +516,15 @@
           <div class="post-card">
             <div class="pc-head">
               ${avatar(t.author, t.color)}
-              <div class="pc-who"><b>${esc(t.author)}</b><time>发布于 ${fmtTime(t.created)}</time></div>
+              <div class="pc-who">
+                <b>${esc(t.author)}</b>${gradeBadge(mainGrade)}
+                <time>发布于 ${fmtTime(t.created)}</time>
+              </div>
               ${canDelTopic ? '<button class="btn btn-ghost btn-sm" id="delTopic">🗑 删除</button>' : ""}
             </div>
             <div class="pc-body">${t.body.map((p) => `<p>${esc(p)}</p>`).join("")}</div>
-            ${t.images.length ? `<div class="pc-imgs">${t.images.map((m) => `
-              <figure><img src="${m.src}" alt="${esc(m.caption || "")}" data-cap="${esc(m.caption || "")}" loading="lazy"><figcaption>${esc(m.caption || "")}</figcaption></figure>`).join("")}</div>` : ""}
+            ${tImgs.length ? `<div class="pc-imgs">${tImgs.map((m) => `
+              <figure><img src="${esc(m.src)}" alt="${esc(m.caption || "")}" data-cap="${esc(m.caption || "")}" loading="lazy"><figcaption>${esc(m.caption || "")}</figcaption></figure>`).join("")}</div>` : ""}
             <div class="pc-badges">${catChip(t.category)}${tagChips(t.tags)}</div>
             <div class="pc-actions">
               <span class="pa-item" title="浏览量">👁 浏览 <b>${viewCount(t)}</b></span>
@@ -618,6 +655,21 @@
           t._fav = d.favorited;
           $("#paFav").innerHTML = t._fav ? "⭐ 已收藏" : "☆ 收藏";
           toast(t._fav ? "已收藏，可在个人中心查看" : "已取消收藏");
+        });
+
+        /* 删除评论（本人/帖主/管理员）：其下所有回复级联删除 */
+        $$(".act-del", root).forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            if (!confirm("删除这条评论？其下所有回复将一并删除。")) return;
+            const r = await fetch(`/api/replies/${encodeURIComponent(t.id)}/${encodeURIComponent(btn.dataset.rid)}`, { method: "DELETE" });
+            const d = await r.json();
+            if (!r.ok) { toast(d.error || "删除失败"); return; }
+            toast(d.removed > 1 ? `已删除（含 ${d.removed - 1} 条下级回复）` : "已删除");
+            try {
+              window.SERVER_REPLIES[t.id] = await (await fetch("/api/topics/" + encodeURIComponent(t.id) + "/replies")).json();
+            } catch {}
+            render();
+          });
         });
 
         /* 顶层评论发布 */

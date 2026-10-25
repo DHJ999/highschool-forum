@@ -338,6 +338,10 @@ button { font-family: inherit; }
 .post.child .avatar { width: 26px; height: 26px; font-size: 12px; }
 .post.child .p-text { font-size: 14px; }
 .reply-to { font-size: 11.5px; color: var(--accent-strong); }
+.grade-badge {
+  font-size: 11px; color: var(--muted); background: var(--card);
+  border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; line-height: 1.5;
+}
 .rbox { display: flex; flex-direction: column; gap: 8px; margin: 8px 20px 12px; }
 .rbox textarea {
   width: 100%; background: var(--card); border: 1px solid var(--border);
