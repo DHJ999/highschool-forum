@@ -31,6 +31,8 @@ html[data-theme="light"] {
 }
 
 * { box-sizing: border-box; }
+/* hidden 属性优先级兜底：防止 display 规则覆盖导致隐藏失效 */
+[hidden] { display: none !important; }
 body {
   margin: 0; color: var(--text);
   background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 340px, var(--bg) 100%);
