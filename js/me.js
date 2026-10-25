@@ -100,7 +100,7 @@
             ${me.role === "admin" ? '<span class="p-op-badge">管理员</span>' : ""}
           </h2>
           <p class="me-meta">
-            ${esc(me.email)} · ${me.grade ? me.grade + " 级入学" : "未设置年级"} ·
+            ${esc(me.email)} · ${me.grade ? me.grade + " 级" : "未设置年级"} ·
             加入于 ${relTime(me.createdAt)}前
           </p>
         </div>

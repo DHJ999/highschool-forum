@@ -143,7 +143,7 @@
       <div class="rail-card">
         <div class="rail-user-head">
           ${avatar(me.nickname, me.color)}
-          <div><b>${esc(me.nickname)}</b><span>${me.grade ? me.grade + " 级入学" : "未设置年级"}</span></div>
+          <div><b>${esc(me.nickname)}</b><span>${me.grade ? me.grade + " 级" : "未设置年级"}</span></div>
         </div>
         <div class="rail-btns">
           <a class="btn btn-ghost" href="me.html">👤 个人中心</a>

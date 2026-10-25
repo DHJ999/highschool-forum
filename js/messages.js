@@ -135,7 +135,7 @@
         <span class="avatar" style="--c:${u.color}">${esc(u.nickname[0])}</span>
         <div class="chat-title">
           <b>${esc(u.nickname)}</b>
-          <span>${u.grade ? u.grade + " 级入学" : ""}${data.mutual ? " · 互相关注" : ""}</span>
+          <span>${u.grade ? u.grade + " 级" : ""}${data.mutual ? " · 互相关注" : ""}</span>
         </div>
         <button class="btn btn-ghost btn-sm" id="chatBack">← 会话</button>
       </div>
