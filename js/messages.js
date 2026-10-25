@@ -115,13 +115,38 @@
 
     $("#chatBack").addEventListener("click", () => { openUid = null; chatBox.innerHTML = '<div class="chat-empty">选择左侧会话</div>'; loadContacts(); });
 
-    /* 图片选择 → 上传 → 暂存 */
+    /* 图片选择 → 压缩 → 上传 → 暂存 */
     $("#btnImg").addEventListener("click", () => $("#imgInput").click());
+    const compressImage = (file) => new Promise((resolve) => {
+      if (file.type === "image/gif" || file.size <= 400 * 1024) return resolve(file);
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1920;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          const k = MAX / Math.max(width, height);
+          width = Math.max(1, Math.round(width * k));
+          height = Math.max(1, Math.round(height * k));
+        }
+        const c = document.createElement("canvas");
+        c.width = width; c.height = height;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        c.toBlob((b) => resolve(b || file), "image/jpeg", 0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
     $("#imgInput").addEventListener("change", async (e) => {
-      const f = e.target.files[0];
+      const f0 = e.target.files[0];
       e.target.value = "";
-      if (!f) return;
-      if (f.size > 3 * 1024 * 1024) { toast("图片不能超过 3MB"); return; }
+      if (!f0) return;
+      const f = await compressImage(f0);
+      if (f.size > 3 * 1024 * 1024) { toast("图片压缩后仍超过 3MB，请换一张"); return; }
       const reader = new FileReader();
       reader.onload = async () => {
         try {

@@ -266,6 +266,12 @@ button { font-family: inherit; }
 }
 .p-text { margin: 0 0 10px; font-size: 15px; line-height: 1.9; }
 .p-text:first-of-type { font-size: 15.5px; }
+/* 主楼正文：文章化排版，区别于评论 */
+.post-list > .post:first-child .p-text {
+  font-size: 16.5px; line-height: 2.1; margin: 0 0 22px;
+  font-family: Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  letter-spacing: 0.01em; text-align: justify;
+}
 .p-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 10px 0 12px; }
 .p-images figure { margin: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card); }
 .p-images img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; cursor: zoom-in; }

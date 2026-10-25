@@ -80,7 +80,7 @@
   input.addEventListener("focus", renderPop);
   input.addEventListener("blur", () => setTimeout(hide, 150));
 
-  /* ---------- 图片上传（多图暂存） ---------- */
+  /* ---------- 图片上传（多图暂存，大图自动压缩） ---------- */
   let images = [];
   const stageRow = $("#stageRow");
   function renderStage() {
@@ -94,13 +94,41 @@
       renderStage();
     }));
   }
+  /* 压缩：gif 不动；超过 400KB 或边长超 1920 的图缩放并转 JPEG（白底），失败则用原图 */
+  function compressImage(file) {
+    return new Promise((resolve) => {
+      if (file.type === "image/gif" || file.size <= 400 * 1024) return resolve(file);
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1920;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          const k = MAX / Math.max(width, height);
+          width = Math.max(1, Math.round(width * k));
+          height = Math.max(1, Math.round(height * k));
+        }
+        const c = document.createElement("canvas");
+        c.width = width; c.height = height;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        c.toBlob((b) => resolve(b || file), "image/jpeg", 0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
   $("#btnImgs").addEventListener("click", () => $("#imgInput").click());
   $("#imgInput").addEventListener("change", async (e) => {
     const files = [...e.target.files];
     e.target.value = "";
     for (const f of files) {
       if (images.length >= 9) { toast("最多 9 张图片"); break; }
-      if (f.size > 3 * 1024 * 1024) { toast(`「${f.name}」超过 3MB，已跳过`); continue; }
+      const f2 = await compressImage(f);
+      if (f2.size > 3 * 1024 * 1024) { toast(`「${f.name}」压缩后仍超过 3MB，已跳过`); continue; }
       await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = async () => {
@@ -115,7 +143,7 @@
           } catch { toast("上传失败"); }
           resolve();
         };
-        reader.readAsDataURL(f);
+        reader.readAsDataURL(f2);
       });
     }
   });
@@ -126,9 +154,20 @@
     const me = window.AUTH && window.AUTH.user;
     if (!me) { window.openAuth("login"); return; }
     const title = $("#nTitle").value.trim();
+    if (!title) { $("#pfErr").textContent = "标题不能为空"; return; }
     const body = $("#nBody").value.trim();
-    if (!title || !body) return;
-    const tags = parseTopics(input.value);
+    /* 话题规则：填了就必须以 # 开头，裸文字（如「你好，新同学。」）判为非法 */
+    const raw = input.value.trim();
+    if (raw) {
+      const tags = parseTopics(raw);
+      const residue = raw.replace(/#[^\s#,，]+/g, "").replace(/[\s,，#]/g, "");
+      if (!tags.length || residue) {
+        $("#pfErr").textContent = "话题必须以 # 开头（如 #军训），多个话题用空格分隔；不需要话题可留空";
+        input.focus();
+        return;
+      }
+    }
+    const tags = parseTopics(raw);
     const btn = $("#pfSubmit");
     btn.disabled = true;
     try {
