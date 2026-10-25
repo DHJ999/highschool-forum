@@ -406,9 +406,9 @@ html[data-theme="light"] {
 .topic-item.create { color: var(--accent-strong); }
 .topic-item.none { color: var(--muted); cursor: default; }
 
-/* ---------- 发布帖子页 ---------- */
-.pf-wrap { max-width: 1160px; margin: 26px auto; padding: 0 24px 60px; }
-.pf-wrap .pf-card { width: 100%; max-width: none; }
+/* ---------- 发布帖子页：与主页同宽（左右各 5%），非悬浮卡片 ---------- */
+.pf-wrap { max-width: none; margin: 0; padding: 22px 5% 60px; }
+.pf-wrap .pf-card { width: 100%; max-width: none; box-shadow: none; }
 .pf-head-tip { color: var(--muted); font-size: 12.5px; margin: -6px 0 16px; }
 .stage-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
