@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>风华正茂</title>
+<link rel="stylesheet" href="css/style.css?v=10">
+</head>
+<body data-page="topic">
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <button class="icon-btn" id="btnMenu" aria-label="菜单">☰</button>
+    <a class="brand" href="index.html"><b>拾光纪</b><span>同学故事纪念站</span></a>
+    <div class="search"><input id="searchInput" placeholder="搜索话题、正文或人名……（回车跳转搜索）"></div>
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="index.html">← 全部话题</a>
+      <span id="authArea" style="display:flex;gap:10px;align-items:center"></span>
+      <button class="icon-btn" id="btnTheme" title="切换深浅色">◐</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-sec"><h5>话题</h5><div id="sideTopics"></div></div>
+    <div class="side-sec"><h5>分类 · 年级</h5><div id="sideCats"></div></div>
+    <div class="side-sec"><h5>标签</h5><div id="sideTags"></div></div>
+  </aside>
+
+  <main id="topicRoot"></main>
+
+  <aside class="rail" id="rail"></aside>
+</div>
+
+<script src="js/data.js?v=10"></script>
+<script src="js/auth.js?v=10"></script>
+<script src="js/app.js?v=10"></script>
+</body>
+</html>

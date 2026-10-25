@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>风华正茂</title>
+<link rel="stylesheet" href="css/style.css?v=10">
+</head>
+<body data-page="index">
+
+<div class="enter" id="enter">
+  <h1>当时只道是寻常</h1>
+  <div class="enter-line"></div>
+  <button class="enter-btn" type="button">点击进入</button>
+</div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <button class="icon-btn" id="btnMenu" aria-label="菜单">☰</button>
+    <a class="brand" href="index.html"><b>拾光纪</b><span>同学故事纪念站</span></a>
+    <div class="search"><input id="searchInput" placeholder="搜索话题、正文或人名……"></div>
+    <div class="top-actions">
+      <button class="btn btn-accent" id="btnNew">＋ 创建话题</button>
+      <button class="icon-btn" id="btnTheme" title="切换深浅色">◐</button>
+      <span id="authArea" style="display:flex;gap:10px;align-items:center"></span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-sec"><h5>话题</h5><div id="sideTopics"></div></div>
+    <div class="side-sec"><h5>分类 · 年级</h5><div id="sideCats"></div></div>
+    <div class="side-sec"><h5>标签</h5><div id="sideTags"></div></div>
+  </aside>
+
+  <main>
+    <div class="list-head">
+      <div class="list-tabs">
+        <button data-sort="latest" class="on">最新</button>
+        <button data-sort="hot">热门</button>
+      </div>
+      <div class="list-tools">
+        <button class="pill" data-pop="cat">分类 ›</button>
+        <div class="pop" data-for="cat"></div>
+        <button class="pill" data-pop="tag">标签 ›</button>
+        <div class="pop" data-for="tag"></div>
+      </div>
+    </div>
+    <div class="filter-note" id="filterNote"></div>
+    <div class="topic-list" id="topicList"></div>
+  </main>
+
+  <aside class="rail" id="rail"></aside>
+</div>
+
+<div class="modal-mask" id="newMask">
+  <form class="modal" id="newForm">
+    <h3>创建新话题</h3>
+    <div class="field"><label>标题</label><input id="nTitle" required maxlength="60" placeholder="用一句话概括那段回忆"></div>
+    <div class="field-2">
+      <div class="field"><label>年级分类</label>
+        <select id="nCat">
+          <option value="2018">2018级</option>
+          <option value="2019">2019级</option>
+          <option value="2020">2020级</option>
+        </select>
+      </div>
+      <div class="field"><label>标签（空格分隔，最多 4 个）</label><input id="nTags" placeholder="例如：军训 运动会"></div>
+    </div>
+    <div class="field"><label>正文</label><textarea id="nBody" rows="6" required placeholder="把它写下来，讲给当年的我们听……"></textarea></div>
+    <div class="foot">
+      <button type="button" class="btn btn-ghost" data-close>取消</button>
+      <button type="submit" class="btn btn-primary">发布话题</button>
+    </div>
+  </form>
+</div>
+
+<script src="js/data.js?v=10"></script>
+<script src="js/auth.js?v=10"></script>
+<script src="js/app.js?v=10"></script>
+</body>
+</html>

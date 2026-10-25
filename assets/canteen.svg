@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0"/>
+    </filter>
+  </defs>
+  <rect width="800" height="500" fill="#ecdcbd"/>
+  <rect x="0" y="402" width="800" height="98" fill="#c9b28a"/>
+  <rect x="0" y="402" width="800" height="6" fill="#b79e77"/>
+  <rect x="70" y="80" width="170" height="150" fill="#9a8670"/>
+  <rect x="82" y="92" width="146" height="126" fill="#fdf6df"/>
+  <rect x="150" y="92" width="8" height="126" fill="#9a8670"/>
+  <rect x="82" y="150" width="146" height="8" fill="#9a8670"/>
+  <rect x="560" y="76" width="180" height="112" rx="6" fill="#5d554a"/>
+  <rect x="580" y="98" width="100" height="9" rx="4" fill="#c9b28a"/>
+  <rect x="580" y="120" width="140" height="9" rx="4" fill="#8f8676"/>
+  <rect x="580" y="142" width="120" height="9" rx="4" fill="#8f8676"/>
+  <rect x="580" y="164" width="80" height="9" rx="4" fill="#bc5b38"/>
+  <rect x="40" y="330" width="720" height="26" fill="#a8825c"/>
+  <rect x="40" y="356" width="720" height="46" fill="#8d6b48"/>
+  <rect x="40" y="330" width="720" height="5" fill="#c19a6b"/>
+  <g stroke="#ffffff" stroke-width="5" fill="none" opacity="0.55" stroke-linecap="round">
+    <path d="M180 296 c-9 -14 9 -26 0 -42"/>
+    <path d="M400 292 c-9 -14 9 -26 0 -42"/>
+    <path d="M620 296 c-9 -14 9 -26 0 -42"/>
+  </g>
+  <g>
+    <rect x="120" y="318" width="120" height="10" rx="3" fill="#d9c9a6"/>
+    <ellipse cx="180" cy="316" rx="36" ry="12" fill="#f4ead2"/>
+    <ellipse cx="180" cy="313" rx="27" ry="8" fill="#b3592f"/>
+    <rect x="340" y="318" width="120" height="10" rx="3" fill="#d9c9a6"/>
+    <ellipse cx="400" cy="316" rx="36" ry="12" fill="#f4ead2"/>
+    <ellipse cx="400" cy="313" rx="27" ry="8" fill="#7f8b4f"/>
+    <rect x="560" y="318" width="120" height="10" rx="3" fill="#d9c9a6"/>
+    <ellipse cx="620" cy="316" rx="36" ry="12" fill="#f4ead2"/>
+    <ellipse cx="620" cy="313" rx="27" ry="8" fill="#d9a441"/>
+  </g>
+  <rect width="800" height="500" filter="url(#grain)"/>
+</svg>

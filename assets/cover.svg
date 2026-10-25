@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <radialGradient id="bg" cx="0.5" cy="0.42" r="0.95">
+      <stop offset="0" stop-color="#3d332b"/>
+      <stop offset="0.55" stop-color="#241d18"/>
+      <stop offset="1" stop-color="#110d0a"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.7" stop-color="#000000" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#080604" stop-opacity="0.85"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <!-- 干花与暗部光斑 -->
+  <g filter="url(#soft)">
+    <ellipse cx="930" cy="150" rx="190" ry="95" fill="#6b5646" opacity="0.45"/>
+    <ellipse cx="1030" cy="250" rx="130" ry="75" fill="#7a6350" opacity="0.3"/>
+    <ellipse cx="140" cy="110" rx="170" ry="85" fill="#54453a" opacity="0.35"/>
+    <ellipse cx="1080" cy="760" rx="150" ry="80" fill="#3a2e25" opacity="0.4"/>
+  </g>
+  <!-- 相册里斜放的老照片（上） -->
+  <g transform="rotate(-7 440 470)" opacity="0.72">
+    <rect x="245" y="325" width="390" height="280" rx="6" fill="#171310" stroke="#4a3f35" stroke-width="2"/>
+    <rect x="268" y="348" width="344" height="206" fill="#2c2823"/>
+    <circle cx="552" cy="398" r="26" fill="#494136" opacity="0.8"/>
+    <path d="M282 505 q70 -45 135 -12 t185 -28" stroke="#57503f" stroke-width="3" fill="none" opacity="0.75"/>
+    <path d="M300 520 q90 -30 180 -6" stroke="#453e30" stroke-width="2.5" fill="none" opacity="0.6"/>
+  </g>
+  <!-- 相册里斜放的老照片（下） -->
+  <g transform="rotate(4 430 770)" opacity="0.55">
+    <rect x="215" y="635" width="410" height="270" rx="6" fill="#14100d" stroke="#3f362e" stroke-width="2"/>
+    <rect x="238" y="658" width="364" height="196" fill="#242020"/>
+    <path d="M255 810 q80 -55 170 -20 t165 -35" stroke="#4c453a" stroke-width="3" fill="none" opacity="0.7"/>
+    <path d="M280 700 q60 -25 120 -8" stroke="#3d372e" stroke-width="2.5" fill="none" opacity="0.6"/>
+  </g>
+  <rect width="1200" height="900" fill="url(#vig)"/>
+  <rect width="1200" height="900" filter="url(#grain)"/>
+</svg>

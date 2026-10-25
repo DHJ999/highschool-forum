@@ -1,0 +1,13 @@
+{
+  "name": "dmsyzx-forum",
+  "version": "0.2.0",
+  "private": true,
+  "description": "风华正茂 · 高中同学故事纪念站（Discourse 风格 + 用户系统）",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "nodemailer": "^6.9.16"
+  }
+}

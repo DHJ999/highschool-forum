@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6e3c0"/>
+      <stop offset="1" stop-color="#eec093"/>
+    </linearGradient>
+    <pattern id="win" width="70" height="45" patternUnits="userSpaceOnUse">
+      <rect x="10" y="9" width="34" height="27" rx="2" fill="#f4e8cc" opacity="0.9"/>
+    </pattern>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0"/>
+    </filter>
+  </defs>
+  <rect width="800" height="500" fill="url(#sky)"/>
+  <circle cx="648" cy="106" r="72" fill="#eab27e" opacity="0.3"/>
+  <circle cx="648" cy="106" r="50" fill="#eab27e"/>
+  <rect x="110" y="132" width="580" height="200" fill="#b5a288"/>
+  <rect x="96" y="108" width="608" height="30" fill="#8d7a63"/>
+  <rect x="84" y="98" width="632" height="12" fill="#7a684f"/>
+  <rect x="126" y="150" width="548" height="166" fill="url(#win)"/>
+  <rect x="0" y="332" width="800" height="168" fill="#dcc69d"/>
+  <rect x="0" y="332" width="800" height="8" fill="#c9b28a"/>
+  <rect x="252" y="292" width="38" height="128" fill="#9a8670"/>
+  <rect x="510" y="292" width="38" height="128" fill="#9a8670"/>
+  <rect x="242" y="278" width="58" height="18" rx="4" fill="#7a684f"/>
+  <rect x="500" y="278" width="58" height="18" rx="4" fill="#7a684f"/>
+  <rect x="290" y="286" width="220" height="44" rx="6" fill="#bc5b38"/>
+  <text x="404" y="317" text-anchor="middle" font-family="Georgia, 'Songti SC', SimSun, serif" font-size="26" letter-spacing="10" fill="#fdf3e0">第一中学</text>
+  <rect x="46" y="286" width="12" height="52" fill="#8a7355"/>
+  <circle cx="52" cy="258" r="34" fill="#7c8a66"/>
+  <circle cx="30" cy="276" r="22" fill="#66754f"/>
+  <rect x="738" y="286" width="12" height="52" fill="#8a7355"/>
+  <circle cx="744" cy="258" r="34" fill="#7c8a66"/>
+  <circle cx="766" cy="276" r="22" fill="#66754f"/>
+  <rect width="800" height="500" filter="url(#grain)"/>
+</svg>
