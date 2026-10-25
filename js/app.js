@@ -146,7 +146,6 @@
           <div><b>${esc(me.nickname)}</b><span>${me.grade ? me.grade + " 级入学" : "未设置年级"}</span></div>
         </div>
         <div class="rail-btns">
-          <a class="btn btn-primary" href="#" data-act="new">✏️ 发布帖子</a>
           <a class="btn btn-ghost" href="me.html">👤 个人中心</a>
           <a class="btn btn-ghost" href="messages.html">✉ 消息</a>
           ${me.role === "admin" ? '<a class="btn btn-ghost" href="admin.html">⚙ 管理后台</a>' : ""}

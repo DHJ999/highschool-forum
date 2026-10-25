@@ -41,16 +41,6 @@
   const chatBox = $("#chat");
   let openUid = null;
   let pollTimer = null;
-  let stagedImg = null; /* {url, el} 待发送图片 */
-
-  /* ---------- 灯箱 ---------- */
-  const lb = $("#msgLb");
-  lb.addEventListener("click", (e) => { if (e.target.tagName !== "IMG") lb.hidden = true; });
-  document.addEventListener("click", (e) => {
-    const img = e.target.closest(".msg-img");
-    if (img) { lb.querySelector("img").src = img.src; lb.hidden = false; }
-  });
-
   /* ---------- 会话列表 ---------- */
   async function loadContacts() {
     try {
@@ -95,10 +85,7 @@
       </div>
       <div class="chat-scroll" id="chatScroll"></div>
       <div class="chat-foot">
-        <div class="stage" id="stage" hidden></div>
         <div class="composer-row">
-          <button class="btn btn-ghost btn-sm" id="btnImg" title="发送图片">📷</button>
-          <input type="file" id="imgInput" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
           <textarea id="msgInput" rows="1" placeholder="输入消息…（Enter 发送，Shift+Enter 换行）"></textarea>
           <button class="btn btn-primary" id="btnSend">发送</button>
         </div>
@@ -111,80 +98,25 @@
 
     const input = $("#msgInput");
     const canSend = data.canSend;
-    if (!canSend) { input.disabled = true; $("#btnSend").disabled = true; $("#btnImg").disabled = true; }
+    if (!canSend) { input.disabled = true; $("#btnSend").disabled = true; }
 
     $("#chatBack").addEventListener("click", () => { openUid = null; chatBox.innerHTML = '<div class="chat-empty">选择左侧会话</div>'; loadContacts(); });
 
-    /* 图片选择 → 压缩 → 上传 → 暂存 */
-    $("#btnImg").addEventListener("click", () => $("#imgInput").click());
-    const compressImage = (file) => new Promise((resolve) => {
-      if (file.type === "image/gif" || file.size <= 400 * 1024) return resolve(file);
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const MAX = 1920;
-        let { width, height } = img;
-        if (width > MAX || height > MAX) {
-          const k = MAX / Math.max(width, height);
-          width = Math.max(1, Math.round(width * k));
-          height = Math.max(1, Math.round(height * k));
-        }
-        const c = document.createElement("canvas");
-        c.width = width; c.height = height;
-        const ctx = c.getContext("2d");
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-        c.toBlob((b) => resolve(b || file), "image/jpeg", 0.85);
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-      img.src = url;
-    });
-    $("#imgInput").addEventListener("change", async (e) => {
-      const f0 = e.target.files[0];
-      e.target.value = "";
-      if (!f0) return;
-      const f = await compressImage(f0);
-      if (f.size > 3 * 1024 * 1024) { toast("图片压缩后仍超过 3MB，请换一张"); return; }
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          toast("图片上传中…");
-          const r = await fetch("/api/upload", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data: reader.result }),
-          });
-          const d = await r.json();
-          if (!r.ok) { toast(d.error || "上传失败"); return; }
-          stagedImg = d.url;
-          const stage = $("#stage");
-          stage.hidden = false;
-          stage.innerHTML = `<img src="${d.url}" alt=""><button type="button" id="unstage" title="移除">✕</button>`;
-          $("#unstage").addEventListener("click", () => { stagedImg = null; stage.hidden = true; stage.innerHTML = ""; });
-        } catch { toast("上传失败"); }
-      };
-      reader.readAsDataURL(f);
-    });
-
     async function doSend() {
       const text = input.value.trim();
-      if (!text && !stagedImg) return;
+      if (!text) return;
       $("#btnSend").disabled = true;
       try {
         const r = await fetch("/api/messages/" + uid, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, images: stagedImg ? [stagedImg] : [] }),
+          body: JSON.stringify({ text }),
         });
         const d = await r.json();
         if (!r.ok) { toast(d.error || "发送失败"); return; }
         input.value = "";
-        stagedImg = null;
-        const stage = $("#stage");
-        if (stage) { stage.hidden = true; stage.innerHTML = ""; }
         await refresh();
         if (!d.canSend) {
-          input.disabled = true; $("#btnSend").disabled = true; $("#btnImg").disabled = true;
+          input.disabled = true; $("#btnSend").disabled = true;
           const hint = chatBox.querySelector(".chat-hint");
           if (hint) { hint.classList.add("locked"); hint.textContent = "🔒 等待对方回复后才能继续发送；互相关注后可以畅聊"; }
           else chatBox.querySelector(".chat-foot").insertAdjacentHTML("beforeend", '<p class="chat-hint locked">🔒 等待对方回复后才能继续发送；互相关注后可以畅聊</p>');
@@ -218,8 +150,7 @@
     box.innerHTML = msgs.length ? msgs.map((m) => `
       <div class="bubble-row ${m.from === myUid ? "mine" : ""}">
         <div class="bubble">
-          ${m.images && m.images.length ? m.images.map((u) => `<img class="msg-img" src="${u}" alt="图片" loading="lazy">`).join("") : ""}
-          ${m.text ? `<p>${esc(m.text)}</p>` : ""}
+          <p>${esc(m.text)}</p>
           <time>${relTime(m.time)}</time>
         </div>
       </div>`).join("") : '<p class="chat-none">还没有消息，打个招呼吧 👋</p>';

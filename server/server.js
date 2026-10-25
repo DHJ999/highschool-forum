@@ -445,9 +445,8 @@ app.post("/api/messages/:uid", (req, res) => {
   if (!me) return res.status(401).json({ error: "请先登录" });
   const other = +req.params.uid;
   if (!db.users.some((u) => u.id === other) || other === me.id) return res.status(400).json({ error: "无法发送" });
-  const { text, images } = req.body || {};
-  const imgs = Array.isArray(images) ? images.filter((s) => /^\/uploads\//.test(s)).slice(0, 3) : [];
-  if ((!text || !String(text).trim()) && !imgs.length) return res.status(400).json({ error: "消息不能为空" });
+  const { text } = req.body || {};
+  if (!text || !String(text).trim()) return res.status(400).json({ error: "消息不能为空" });
   if (!canSend(me.id, other)) {
     return res.status(403).json({ error: "对方回复前你只能发送一条消息；互相关注后可以畅聊" });
   }
@@ -456,7 +455,7 @@ app.post("/api/messages/:uid", (req, res) => {
     id: "m" + store.nextId("replyId"),
     from: me.id, to: other,
     text: String(text || "").trim().slice(0, 500),
-    images: imgs, time: Date.now(), read: false,
+    time: Date.now(), read: false,
   };
   db.messages.push(msg);
   store.save();

@@ -54,10 +54,6 @@
     const u = window.AUTH.user;
     if (u) {
       area.innerHTML = `
-        <div class="bell-wrap">
-          <button class="icon-btn" id="btnBell" title="通知">🔔<span class="bell-badge" id="bellBadge" hidden></span></button>
-          <div class="notif-dropdown" id="notifDrop"></div>
-        </div>
         <div class="user-menu" id="userMenu">
           <button class="auth-user" id="btnAvatar" title="个人菜单">
             <span class="avatar" style="--c:${u.color}">${esc(u.nickname[0])}</span>
@@ -87,48 +83,6 @@
       area.querySelector('[data-m="profile"]').addEventListener("click", () => { menu.classList.remove("open"); openProfileEdit(); });
       if (u.role !== "admin") area.querySelector('[data-m="email"]').addEventListener("click", () => { menu.classList.remove("open"); openEmailChange(); });
       area.querySelector('[data-m="grade"]').addEventListener("click", () => { menu.classList.remove("open"); openGradeModal(); });
-
-      /* 通知铃铛：点开拉取列表并全部标记已读 */
-      const relTime = (ts) => {
-        const diff = Date.now() - ts;
-        if (diff < 60e3) return "刚刚";
-        if (diff < 3600e3) return `${Math.floor(diff / 60e3)} 分钟前`;
-        if (diff < 86400e3) return `${Math.floor(diff / 3600e3)} 小时前`;
-        const d = new Date(ts);
-        return `${d.getMonth() + 1}月${d.getDate()}日`;
-      };
-      const bellBadge = () => area.querySelector("#bellBadge");
-      async function refreshBell() {
-        try {
-          const d = await (await fetch("/api/me/notifications")).json();
-          const b = bellBadge();
-          if (b) { b.hidden = !d.unread; b.textContent = d.unread > 9 ? "9+" : d.unread; }
-        } catch {}
-      }
-      refreshBell();
-      setInterval(refreshBell, 30000);
-      area.querySelector("#btnBell").addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const drop = area.querySelector("#notifDrop");
-        const opening = !drop.classList.contains("open");
-        drop.classList.toggle("open");
-        if (!opening) return;
-        drop.innerHTML = '<p class="notif-empty">加载中…</p>';
-        try {
-          const d = await (await fetch("/api/me/notifications")).json();
-          drop.innerHTML = d.list.length ? d.list.map((n) => `
-            <a class="notif-item${n.read ? "" : " unread"}" href="topic.html?id=${encodeURIComponent(n.topicId)}">
-              <span class="notif-text"><span class="avatar" style="--c:${n.fromColor}">${esc(n.fromName[0])}</span>${esc(n.fromName)} ${esc(n.text)}</span>
-              <time>${relTime(n.time)}</time>
-            </a>`).join("") : '<p class="notif-empty">暂无通知</p>';
-          await fetch("/api/me/notifications/read", { method: "POST" });
-          const b = bellBadge();
-          if (b) b.hidden = true;
-        } catch { drop.innerHTML = '<p class="notif-empty">加载失败</p>'; }
-      });
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest(".bell-wrap")) area.querySelector("#notifDrop")?.classList.remove("open");
-      });
     } else {
       area.innerHTML = `<a class="btn btn-ghost" href="login.html">登录</a>`;
     }
