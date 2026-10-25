@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>风华正茂</title>
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body data-page="index">
 
@@ -20,7 +20,7 @@
     <a class="brand" href="index.html"><b>拾光纪</b><span>同学故事纪念站</span></a>
     <div class="search"><input id="searchInput" placeholder="搜索话题、正文或人名……"></div>
     <div class="top-actions">
-      <button class="btn btn-accent" id="btnNew">＋ 创建话题</button>
+      <button class="btn btn-accent" id="btnNew">＋ 发布帖子</button>
       <button class="icon-btn" id="btnTheme" title="切换深浅色">◐</button>
       <span id="authArea" style="display:flex;gap:10px;align-items:center"></span>
     </div>
@@ -56,26 +56,22 @@
 
 <div class="modal-mask" id="newMask">
   <form class="modal" id="newForm">
-    <h3>创建新话题</h3>
+    <h3>发布帖子</h3>
     <div class="field"><label>标题</label><input id="nTitle" required maxlength="60" placeholder="用一句话概括那段回忆"></div>
-    <div class="field-2">
-      <div class="field"><label>年级分类（自动选择你的年级）</label>
-        <select id="nCat"></select>
-      </div>
-      <div class="field"><label>标签（空格分隔，最多 4 个）</label><input id="nTags" placeholder="点击下方推荐标签或自己输入">
-        <div class="tag-sugg" id="tagSugg"></div>
-      </div>
+    <div class="field topic-field"><label>话题（输入 # 关联话题，最多 5 个）</label>
+      <input id="nTopics" placeholder="输入 # 添加话题，如 #军训 #毕业" autocomplete="off">
+      <div class="topic-pop" id="topicPop"></div>
     </div>
     <div class="field"><label>正文</label><textarea id="nBody" rows="6" required placeholder="把它写下来，讲给当年的我们听……"></textarea></div>
     <div class="foot">
       <button type="button" class="btn btn-ghost" data-close>取消</button>
-      <button type="submit" class="btn btn-primary">发布话题</button>
+      <button type="submit" class="btn btn-primary">发布帖子</button>
     </div>
   </form>
 </div>
 
-<script src="js/data.js?v=11"></script>
-<script src="js/auth.js?v=11"></script>
-<script src="js/app.js?v=11"></script>
+<script src="js/data.js?v=12"></script>
+<script src="js/auth.js?v=12"></script>
+<script src="js/app.js?v=12"></script>
 </body>
 </html>
