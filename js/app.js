@@ -282,8 +282,16 @@
       storeUpdate((s) => { s.theme = next; });
     });
     /* 登录 / 注册按钮由 auth.js 渲染并绑定 */
-    $("#btnMenu").addEventListener("click", () =>
-      document.body.classList.toggle("side-open"));
+    /* 菜单按钮切换抽屉；点击页面空白处自动收起 */
+    $("#btnMenu").addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.body.classList.toggle("side-open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!document.body.classList.contains("side-open")) return;
+      if (e.target.closest(".sidebar") || e.target.closest("#btnMenu")) return;
+      document.body.classList.remove("side-open");
+    });
   }
   bindTopbar();
 
