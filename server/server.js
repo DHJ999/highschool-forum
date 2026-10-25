@@ -456,10 +456,11 @@ app.post("/api/me/grade", (req, res) => {
   res.json({ ok: true, user: pubUser(user) });
 });
 
-/* 登录 */
+/* 登录：支持邮箱或昵称 */
 app.post("/api/auth/login", (req, res) => {
   const { email, password } = req.body || {};
-  const user = db.users.find((u) => u.email === email);
+  const key = String(email || "").trim();
+  const user = db.users.find((u) => u.email === key || u.nickname === key);
   if (!user || !verifyPw(password, user.pass)) return res.status(401).json({ error: "邮箱或密码不正确" });
   const sid = token();
   db.sessions[sid] = { uid: user.id, expires: Date.now() + SESSION_TTL };

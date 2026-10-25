@@ -170,18 +170,24 @@ button { font-family: inherit; }
   padding: 6px 10px; border-radius: 6px; color: var(--text); font-size: 14px;
 }
 .side-item:hover { background: var(--hover); }
+/* 年级/标签悬停放大动效（高亮项保持自身底色） */
+.side-item {
+  transition: transform 0.15s ease, background 0.15s ease;
+  transform-origin: left center;
+}
+#sideCats .side-item:hover, #sideTags .side-item:hover { transform: scale(1.06); }
 .side-item.active { background: var(--hover); color: var(--accent-strong); }
 .side-item .cnt { margin-left: auto; font-size: 12px; color: var(--muted); }
-/* 热度高亮：第1名最强、第2名次之、第3名最淡（4/5 名不高亮） */
+/* 热度高亮：第1名最强、第2名次之、第3名最淡（4/5 名不高亮）——红色系 */
 :root, html[data-theme="dark"] {
-  --heat1: #2fb1cf;
-  --heat2: rgba(47, 177, 207, 0.30);
-  --heat3: rgba(47, 177, 207, 0.14);
+  --heat1: #e05b5b;
+  --heat2: rgba(224, 91, 91, 0.30);
+  --heat3: rgba(224, 91, 91, 0.14);
 }
 html[data-theme="light"] {
-  --heat1: #0083a3;
-  --heat2: rgba(0, 131, 163, 0.22);
-  --heat3: rgba(0, 131, 163, 0.10);
+  --heat1: #d64c4c;
+  --heat2: rgba(214, 76, 76, 0.22);
+  --heat3: rgba(214, 76, 76, 0.10);
 }
 .side-item.heat-1 { background: var(--heat1); color: #fff; }
 .side-item.heat-1 .cnt { color: rgba(255, 255, 255, 0.85); }
@@ -478,7 +484,27 @@ html[data-theme="light"] {
 .code-row input { flex: 1; }
 .code-row .btn { white-space: nowrap; }
 .auth-err { color: var(--like); font-size: 13px; min-height: 18px; margin: 4px 0 0; }
-.pw-wrap { position: relative; }
+.auth-alt { margin-top: 18px; text-align:center; color: var(--muted); }
+.auth-alt a { color: var(--accent); }
+.auth-alt a:hover { color: var(--accent-strong); }
+
+/* ---------- 独立登录/注册页 ---------- */
+.auth-wrap { max-width: 440px; margin: 48px auto; padding: 0 20px 60px; }
+.auth-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.auth-head { padding: 22px 24px 18px; text-align: center; border-bottom: 1px solid var(--border); }
+.auth-head h2 { margin: 0; font-size: 19px; }
+.auth-body { padding: 26px 32px 26px; }
+.auth-body .field { margin-bottom: 18px; }
+.auth-body .field label { display: none; }
+.auth-body input, .auth-body select {
+  width: 100%; background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; color: var(--text); font: inherit; outline: none;
+}
+.auth-body input:focus, .auth-body select:focus { border-color: var(--accent); }
+.auth-submit { width: 100%; padding: 12px 0; font-weight: 600; font-size: 15px; }
+.auth-links { text-align: center; margin-top: 16px; font-size: 13.5px; }
+.auth-links a { color: var(--muted); cursor: pointer; }
+.auth-links a:hover { color: var(--accent); }
 /* 隐藏 Edge/Chromium 密码框原生的显示密码按钮，统一用自带的 .pw-eye */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear { display: none; }
