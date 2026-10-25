@@ -172,9 +172,24 @@ button { font-family: inherit; }
 .side-item:hover { background: var(--hover); }
 .side-item.active { background: var(--hover); color: var(--accent-strong); }
 .side-item .cnt { margin-left: auto; font-size: 12px; color: var(--muted); }
-/* 名称与火苗固定槽位：多行火苗列对齐 */
-.side-item .lbl { flex: none; min-width: 68px; }
-.side-item .fires { flex: none; min-width: 58px; text-align: left; letter-spacing: 1px; }
+/* 热度高亮：第1名最强、第2名次之、第3名最淡（4/5 名不高亮） */
+:root, html[data-theme="dark"] {
+  --heat1: #2fb1cf;
+  --heat2: rgba(47, 177, 207, 0.30);
+  --heat3: rgba(47, 177, 207, 0.14);
+}
+html[data-theme="light"] {
+  --heat1: #0083a3;
+  --heat2: rgba(0, 131, 163, 0.22);
+  --heat3: rgba(0, 131, 163, 0.10);
+}
+.side-item.heat-1 { background: var(--heat1); color: #fff; }
+.side-item.heat-1 .cnt { color: rgba(255, 255, 255, 0.85); }
+.side-item.heat-2 { background: var(--heat2); }
+.side-item.heat-3 { background: var(--heat3); }
+.side-item.heat-1:hover { background: var(--heat1); }
+.side-item.heat-2:hover { background: var(--heat2); }
+.side-item.heat-3:hover { background: var(--heat3); }
 .cat-dot { width: 11px; height: 11px; border-radius: 2.5px; flex: none; }
 .tag-ic { color: var(--muted); font-size: 13px; flex: none; }
 

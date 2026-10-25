@@ -233,9 +233,8 @@
   /* ---------- 公共区块 ---------- */
   const page = document.body.dataset.page;
 
-  /* 侧栏（两页共用）：年级与标签只显示最火热的前 5 个（按帖子量排序）；
-     火苗按名次：第1名🔥🔥🔥、第2名🔥🔥、第3名🔥、第4/5名无 */
-  const firesByRank = (i) => (i === 0 ? "🔥🔥🔥" : i === 1 ? "🔥🔥" : i === 2 ? "🔥" : "");
+  /* 侧栏（两页共用）：年级与标签按帖子量排前 5；前 3 名高亮（第1最强、第2次之、第3最淡），4/5 名不高亮 */
+  const heatCls = (i) => (i === 0 ? "heat-1" : i === 1 ? "heat-2" : i === 2 ? "heat-3" : "");
   function renderSidebar(activeCat, activeTag) {
     const topics = allTopics();
     const catCount = (cid) => topics.filter((t) => t.category === cid).length;
@@ -245,7 +244,7 @@
       <a class="side-item ${!activeCat && !activeTag ? "active" : ""}" href="index.html">📋 全部话题</a>
       <a class="side-item" data-act="new">✏️ 发布帖子</a>`;
 
-    /* 年级 Top5（按话题数）；当前筛选中的年级即使不在榜上也保留显示（无火苗） */
+    /* 年级 Top5（按话题数）；当前筛选中的年级即使不在榜上也保留显示（不高亮） */
     let catList = (window.CATS || DATA.categories)
       .map((c) => ({ ...c, n: catCount(c.id) }))
       .sort((a, b) => b.n - a.n || a.id - b.id)
@@ -255,19 +254,19 @@
       if (c) catList.push({ ...c, n: catCount(c.id) });
     }
     $("#sideCats").innerHTML = catList.map((c, i) => `
-      <a class="side-item ${activeCat === c.id ? "active" : ""}" href="index.html?cat=${c.id}">
-        <span class="cat-dot" style="background:${c.color}"></span><span class="lbl">${c.label}</span><span class="fires">${firesByRank(i)}</span>
+      <a class="side-item ${heatCls(i)} ${activeCat === c.id ? "active" : ""}" href="index.html?cat=${c.id}">
+        <span class="cat-dot" style="background:${c.color}"></span>${c.label}
         <span class="cnt">${c.n}</span>
       </a>`).join("");
 
-    /* 标签 Top5（按话题数）；当前筛选中的标签同样保留（无火苗） */
+    /* 标签 Top5（按话题数）；当前筛选中的标签同样保留（不高亮） */
     let tagList = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 5);
     if (activeTag && !tagList.some(([g]) => g === activeTag)) {
       tagList.push([activeTag, tags[activeTag] || 0]);
     }
     $("#sideTags").innerHTML = tagList.map(([g, n], i) => `
-      <a class="side-item ${activeTag === g ? "active" : ""}" href="index.html?tag=${encodeURIComponent(g)}">
-        <span class="tag-ic">#</span><span class="lbl">${esc(g)}</span><span class="fires">${firesByRank(i)}</span>
+      <a class="side-item ${heatCls(i)} ${activeTag === g ? "active" : ""}" href="index.html?tag=${encodeURIComponent(g)}">
+        <span class="tag-ic">#</span>${esc(g)}
         <span class="cnt">${n}</span>
       </a>`).join("");
   }
