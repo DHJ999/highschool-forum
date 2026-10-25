@@ -141,7 +141,7 @@ button { font-family: inherit; }
 .rail-user-stats b { font-size: 17px; display: block; }
 .rail-user-stats span { font-size: 11.5px; color: var(--muted); }
 .rail-btns { display: flex; flex-direction: column; gap: 8px; }
-.rail-btns .btn { width: 100%; font-size: 13.5px; padding: 8px 0; }
+.rail-btns .btn { width: 100%; font-size: 13.5px; padding: 8px 12px; text-align: left; display: flex; align-items: center; gap: 6px; }
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stat-grid > div { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 10px 8px; text-align: center; }
 .stat-grid b { font-size: 18px; display: block; }
