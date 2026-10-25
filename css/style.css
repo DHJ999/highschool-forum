@@ -535,6 +535,20 @@ a.cmt-user:hover .avatar { box-shadow: 0 0 0 2px var(--accent); }
   .t-side { display: none; }
   .search { display: none; }
   #btnMenu { display: inline-flex; }
+  /* 顶栏收紧：右侧按钮组不挤出屏幕，头像始终可见 */
+  .topbar-inner { gap: 8px; }
+  .top-actions { gap: 6px; min-width: 0; }
+  .top-actions .btn-accent { padding: 7px 12px; font-size: 13px; }
+  #authArea { gap: 6px !important; }
+}
+
+/* 手机竖屏：隐藏昵称文字，只留头像；按钮进一步收紧 */
+@media (max-width: 560px) {
+  .topbar-inner { padding: 0 12px; }
+  .auth-user b, .user-menu .caret { display: none; }
+  .auth-user { padding: 4px 6px; }
+  .msg-link { padding: 7px 9px; font-size: 13px; }
+  .top-actions .btn-accent { padding: 7px 9px; }
 }
 
 /* ---------- 登录 / 注册 ---------- */
