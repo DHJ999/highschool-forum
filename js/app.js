@@ -343,8 +343,11 @@
       if (sort === "latest") {
         rest.sort((a, b) => lastActivity(b) - lastActivity(a));
       } else {
+        /* 热门：点赞量从高到低；点赞相同看评论量；再相同按最近活跃 */
         rest.sort((a, b) =>
-          (b.likes + repliesOf(b).length * 3) - (a.likes + repliesOf(a).length * 3));
+          (b.likes - a.likes) ||
+          (repliesOf(b).length - repliesOf(a).length) ||
+          (lastActivity(b) - lastActivity(a)));
       }
       list = pinned.concat(rest);
 
