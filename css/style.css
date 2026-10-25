@@ -392,14 +392,12 @@ html[data-theme="light"] {
 
 /* 评论行 */
 .cmt { display: flex; gap: 12px; padding: 14px 0; border-top: 1px dashed var(--border); }
-.cmt .avatar { width: 34px; height: 34px; font-size: 14px; flex: none; margin-top: 2px; }
+.cmt .avatar { width: 34px; height: 34px; font-size: 14px; flex: none; margin-top: 4px; }
 .cmt-main { flex: 1; min-width: 0; }
-.cmt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-.cmt-head > * { white-space: nowrap; }
-.cmt-who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.cmt-head { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin-bottom: 4px; }
+.cmt-who { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .cmt-who b { font-size: 13.5px; }
-.cmt-meta { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
-.cmt-meta time { font-size: 12px; color: var(--muted); }
+.cmt-time { font-size: 12px; color: var(--muted); }
 .cmt-text { margin: 0 0 6px; font-size: 14.5px; line-height: 1.75; white-space: pre-wrap; }
 .cmt-actions { display: flex; gap: 14px; }
 .cmt.child { margin-left: 46px; }
@@ -562,16 +560,15 @@ html[data-theme="light"] {
   .msg-link { padding: 7px 9px; font-size: 13px; }
   .top-actions .btn-accent { padding: 7px 9px; }
   /* 评论头部：间距收紧，楼中楼缩进减小 */
-  .cmt-head { gap: 5px; }
+  .cmt-head { gap: 2px; }
   .cmt.child { margin-left: 22px; }
-  /* 评论卡收紧内边距与字号，保证「名+头衔 | 年级+时间」单行放下 */
+  /* 评论卡收紧内边距与字号，昵称+头衔一行放下 */
   .comments-card { padding: 16px 14px; }
   .cmt { gap: 8px; }
-  .cmt .avatar { width: 30px; height: 30px; font-size: 13px; }
+  .cmt .avatar { width: 30px; height: 30px; font-size: 13px; margin-top: 3px; }
   .cmt-who { gap: 5px; }
   .cmt-who b { font-size: 12.5px; }
-  .cmt-meta { gap: 5px; }
-  .cmt-meta time { font-size: 11px; }
+  .cmt-time { font-size: 11px; }
   .cmt-head .lv-badge, .cmt-head .grade-badge { padding: 0 4px; }
 }
 

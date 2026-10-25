@@ -527,7 +527,7 @@
                   ${lvBadge(r)}
                   ${gradeBadge(grade)}
                 </span>
-                <span class="cmt-meta"><time>${fmtTime(r.time)}</time></span>
+                <time class="cmt-time">${fmtTime(r.time)}</time>
               </div>
               <p class="cmt-text">${esc(r.text)}</p>
               ${replyImgs(r)}
