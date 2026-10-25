@@ -472,13 +472,17 @@
         const replyHTML = (r, isChild) => {
           const isOp = (r.uid && r.uid === t.uid) || (!r.uid && r.user === t.author);
           const canDel = meNow && ((r.uid && r.uid === meNow.id) || (t.uid && t.uid === meNow.id) || meNow.role === "admin");
+          const canDM = meNow && r.uid && r.uid !== meNow.id;
+          const dmLink = (inner) => canDM
+            ? `<a class="cmt-user" href="messages.html?to=${r.uid}" title="发私信">${inner}</a>`
+            : `<span class="cmt-user">${inner}</span>`;
           const grade = r.grade ?? t.category;
           return `
           <div class="cmt${isChild ? " child" : ""}" data-rid="${r._id}">
-            ${avatar(r.user, r.color)}
+            ${dmLink(avatar(r.user, r.color))}
             <div class="cmt-main">
               <div class="cmt-head">
-                <b>${esc(r.user)}</b>
+                ${dmLink(`<b>${esc(r.user)}</b>`)}
                 ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
                 ${gradeBadge(grade)}
                 <time>${fmtTime(r.time)}</time>
@@ -488,6 +492,7 @@
               <div class="cmt-actions">
                 <button class="act-btn act-like" data-k="${likeKey(r._idx)}">❤ <b>${likesFor(t, r._idx)}</b></button>
                 <button class="act-btn act-reply" data-rid="${r._id}" data-nick="${esc(r.user)}">💬 回复</button>
+                ${canDM ? `<a class="act-btn" href="messages.html?to=${r.uid}">✉ 私信</a>` : ""}
                 ${canDel ? `<button class="act-btn act-del" data-rid="${r._id}" title="删除（其下回复一并删除）">🗑 删除</button>` : ""}
               </div>
             </div>

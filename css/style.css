@@ -340,6 +340,9 @@ html[data-theme="light"] {
 .cmt-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
 .cmt-head b { font-size: 13.5px; }
 .cmt-head time { font-size: 12px; color: var(--muted); }
+.cmt-user { color: inherit; }
+a.cmt-user:hover b { color: var(--accent-strong); }
+a.cmt-user:hover .avatar { box-shadow: 0 0 0 2px var(--accent); }
 .cmt-text { margin: 0 0 6px; font-size: 14.5px; line-height: 1.75; white-space: pre-wrap; }
 .cmt-actions { display: flex; gap: 14px; }
 .cmt.child { margin-left: 46px; }
