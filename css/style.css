@@ -123,6 +123,8 @@ button { font-family: inherit; }
   display: grid; grid-template-columns: 220px minmax(0, 1fr) 272px; gap: 24px;
 }
 .sidebar { position: sticky; top: 76px; align-self: start; }
+/* 首页：分类/标签下移，与第一条帖子顶部对齐 */
+body[data-page="index"] .sidebar { margin-top: 77px; }
 .rail { position: sticky; top: 76px; align-self: start; display: flex; flex-direction: column; gap: 16px; }
 @media (max-width: 1120px) {
   .layout { grid-template-columns: 220px minmax(0, 1fr); }
