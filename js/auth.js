@@ -57,7 +57,7 @@
         <a class="btn btn-ghost msg-link" href="messages.html" title="消息">✉ 消息<span class="cnt-badge" id="msgBadge" hidden></span></a>
         <div class="user-menu" id="userMenu">
           <button class="auth-user" id="btnAvatar" title="个人菜单">
-            <span class="avatar" style="--c:${u.color}">${esc(u.nickname[0])}</span>
+            <span class="avatar" style="--c:${u.color}">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(u.nickname[0])}</span>
             <b>${esc(u.nickname)}</b><span class="caret">▾</span>
           </button>
           <div class="user-dropdown">
@@ -118,7 +118,17 @@
     m.innerHTML = `
       <form class="modal" id="profEditForm">
         <h3>头像与昵称</h3>
-        <div class="field"><label>头像颜色（当前效果见顶栏头像）</label>
+        <div class="field"><label>自定义头像（可选，上传后替代颜色+首字）</label>
+          <div class="av-row">
+            <span class="avatar avatar-lg" id="avPreview" style="--c:${u.color}">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(u.nickname[0])}</span>
+            <div class="av-btns">
+              <button type="button" class="btn btn-ghost btn-sm" id="avUpload">📷 上传头像</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="avReset" ${u.avatar ? "" : "hidden"}>↺ 恢复默认</button>
+            </div>
+            <input type="file" id="avInput" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+          </div>
+        </div>
+        <div class="field"><label>头像颜色（未上传图片时生效）</label>
           <div class="swatches" id="swatches">
             ${PALETTE.map((c) => `<button type="button" class="swatch${c === u.color ? " on" : ""}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}
           </div>
@@ -137,6 +147,60 @@
       picked = s.dataset.c;
       m.querySelectorAll(".swatch").forEach((x) => x.classList.toggle("on", x === s));
     }));
+
+    /* 头像上传：压缩成正方形后立即生效 */
+    const compressSquare = (file) => new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const S = Math.min(img.width, img.height);
+        const c = document.createElement("canvas");
+        c.width = c.height = Math.min(400, S);
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, (img.width - S) / 2, (img.height - S) / 2, S, S, 0, 0, c.width, c.height);
+        c.toBlob((b) => resolve(b), "image/jpeg", 0.9);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+    m.querySelector("#avUpload").addEventListener("click", () => m.querySelector("#avInput").click());
+    m.querySelector("#avInput").addEventListener("change", async (e) => {
+      const f = e.target.files[0];
+      e.target.value = "";
+      if (!f) return;
+      notify("头像上传中…");
+      const blob = await compressSquare(f);
+      if (!blob) { m.querySelector("#peErr").textContent = "图片读取失败"; return; }
+      const dataUrl = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+      try {
+        const r = await fetch("/api/me/avatar", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: dataUrl }),
+        });
+        const d = await r.json();
+        if (!r.ok) { m.querySelector("#peErr").textContent = d.error || "上传失败"; return; }
+        window.AUTH.user.avatar = d.avatar;
+        const pv = m.querySelector("#avPreview");
+        pv.innerHTML = `<img src="${esc(d.avatar)}" alt="">`;
+        m.querySelector("#avReset").hidden = false;
+        notify("头像已更新");
+      } catch { m.querySelector("#peErr").textContent = "上传失败"; }
+    });
+    m.querySelector("#avReset").addEventListener("click", async () => {
+      try {
+        const r = await fetch("/api/me/profile", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar: null }),
+        });
+        if (!r.ok) { m.querySelector("#peErr").textContent = "操作失败"; return; }
+        window.AUTH.user.avatar = null;
+        const pv = m.querySelector("#avPreview");
+        pv.innerHTML = esc(u.nickname[0]);
+        m.querySelector("#avReset").hidden = true;
+        notify("已恢复默认头像");
+      } catch { m.querySelector("#peErr").textContent = "操作失败"; }
+    });
     m.querySelector("#peCancel").addEventListener("click", () => m.remove());
     m.addEventListener("click", (e) => { if (e.target === m) m.remove(); });
     m.querySelector("#profEditForm").addEventListener("submit", async (e) => {

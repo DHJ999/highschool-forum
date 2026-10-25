@@ -57,7 +57,7 @@
 
     const contactRow = (c) => `
       <div class="contact${c.id === openUid ? " on" : ""}" data-uid="${c.id}">
-        <span class="avatar" style="--c:${c.color}">${esc(c.nickname[0])}</span>
+        <span class="avatar" style="--c:${c.color}">${c.avatar ? `<img src="${esc(c.avatar)}" alt="">` : esc(c.nickname[0])}</span>
         <div class="c-main">
           <div class="c-line"><b>${esc(c.nickname)}</b>${c.mutual ? '<span class="chip mutual">互关</span>' : ""}</div>
           <p class="c-last">${c.lastFromMe ? "我：" : ""}${esc(c.last)}</p>
@@ -132,7 +132,7 @@
     const u = data.user;
     chatBox.innerHTML = `
       <div class="chat-head">
-        <span class="avatar" style="--c:${u.color}">${esc(u.nickname[0])}</span>
+        <span class="avatar" style="--c:${u.color}">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(u.nickname[0])}</span>
         <div class="chat-title">
           <b>${esc(u.nickname)}</b>
           <span>${u.grade ? u.grade + " 级" : ""}${data.mutual ? " · 互相关注" : ""}</span>

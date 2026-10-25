@@ -55,8 +55,10 @@
     if (diff < 365 * day) return `${Math.floor(diff / (30 * day))} 个月前`;
     return `${Math.floor(diff / (365 * day))} 年前`;
   }
-  const avatar = (name, color, cls) =>
-    `<span class="avatar ${cls || ""}" style="--c:${color}">${esc(name[0])}</span>`;
+  const avatar = (name, color, cls, img) =>
+    img
+      ? `<span class="avatar ${cls || ""}" style="--c:${color}"><img src="${esc(img)}" alt=""></span>`
+      : `<span class="avatar ${cls || ""}" style="--c:${color}">${esc(name[0])}</span>`;
   const catChip = (cid) => {
     const c = catById(cid);
     return `<span class="chip cat"><span class="cat-dot" style="background:${c.color}"></span>${c.label}</span>`;
@@ -142,7 +144,7 @@
       html += `
       <div class="rail-card">
         <div class="rail-user-head">
-          ${avatar(me.nickname, me.color)}
+          ${avatar(me.nickname, me.color, "", me.avatar)}
           <div><b>${esc(me.nickname)}</b><span>${me.grade ? me.grade + " 级" : "未设置年级"}</span></div>
         </div>
         <div class="rail-btns">
@@ -167,7 +169,7 @@
       <div class="rail-card">
         <h4>作者</h4>
         <div class="rail-user-head">
-          ${avatar(a.author, a.color)}
+          ${avatar(a.author, a.color, "", a.authorAvatar)}
           <div><b>${esc(a.author)}</b><span>${catById(a.category) ? catById(a.category).label : ""}</span></div>
         </div>
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 4px">发布于 ${fmtTime(a.created)}</p>
@@ -493,7 +495,7 @@
           const grade = r.grade ?? t.category;
           return `
           <div class="cmt${isChild ? " child" : ""}" data-rid="${r._id}">
-            ${dmLink(avatar(r.user, r.color))}
+            ${dmLink(avatar(r.user, r.color, "", r.avatar))}
             <div class="cmt-main">
               <div class="cmt-head">
                 ${dmLink(`<b>${esc(r.user)}</b>`)}
@@ -522,7 +524,7 @@
           </header>
           <div class="post-card">
             <div class="pc-head">
-              ${avatar(t.author, t.color)}
+              ${avatar(t.author, t.color, "", t.authorAvatar)}
               <div class="pc-who">
                 <b>${esc(t.author)}</b>${gradeBadge(mainGrade)}
                 <time>发布于 ${fmtTime(t.created)}</time>

@@ -94,7 +94,7 @@
 
     root.innerHTML = `
       <div class="me-profile">
-        <span class="avatar avatar-lg" style="--c:${me.color}">${esc(me.nickname[0])}</span>
+        <span class="avatar avatar-lg" style="--c:${me.color}">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc(me.nickname[0])}</span>
         <div class="me-pinfo">
           <h2>${esc(me.nickname)}
             ${me.role === "admin" ? '<span class="p-op-badge">管理员</span>' : ""}

@@ -58,7 +58,7 @@ function isAdmin(req) {
   const u = currentUser(req);
   return !!(u && u.role === "admin");
 }
-const pubUser = (u) => ({ id: u.id, email: u.email, nickname: u.nickname, color: u.color, role: u.role, grade: u.grade ?? null, gradeChanged: !!u.gradeChanged, tags: u.tags || [], createdAt: u.createdAt });
+const pubUser = (u) => ({ id: u.id, email: u.email, nickname: u.nickname, color: u.color, avatar: u.avatar || null, role: u.role, grade: u.grade ?? null, gradeChanged: !!u.gradeChanged, tags: u.tags || [], createdAt: u.createdAt });
 
 /* 管理员凭据：每次启动以 config 为准重新哈希 */
 db.adminCred = { username: config.admin.username, pass: hashPw(config.admin.password) };
@@ -340,7 +340,7 @@ app.get("/api/me/followers", (req, res) => {
     const u = db.users.find((x) => x.id === uid);
     if (!u) return null;
     const mutual = (db.follows[uid] || []).includes(user.id);
-    return { id: u.id, nickname: u.nickname, color: u.color, grade: u.grade ?? null, mutual };
+    return { id: u.id, nickname: u.nickname, color: u.color, avatar: u.avatar || null, grade: u.grade ?? null, mutual };
   }).filter(Boolean).filter((u) => !u.mutual));
 });
 app.post("/api/me/notifications/read", (req, res) => {
@@ -440,6 +440,7 @@ app.get("/api/messages/contacts", (req, res) => {
     return {
       id: otherId,
       nickname: u ? u.nickname : "已注销用户",
+      avatar: u ? (u.avatar || null) : null,
       color: u ? u.color : "#888",
       last: (m.text || "[图片]").slice(0, 30),
       lastFromMe: m.from === me.id,
@@ -522,8 +523,34 @@ app.patch("/api/me/profile", (req, res) => {
     if (!PALETTE.includes(color)) return res.status(400).json({ error: "头像颜色无效" });
     user.color = color;
   }
+  if ((req.body || {}).avatar === null) {
+    if (user.avatar && /^\/uploads\//.test(user.avatar)) {
+      try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(user.avatar))); } catch {}
+    }
+    user.avatar = null;
+  }
   store.save();
   res.json({ ok: true, user: pubUser(user) });
+});
+
+/* 自定义头像：上传（前端已压缩） */
+app.post("/api/me/avatar", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "请先登录" });
+  const m = /^data:image\/(png|jpe?g|gif|webp);base64,(.+)$/.exec((req.body || {}).data || "");
+  if (!m) return res.status(400).json({ error: "仅支持 png/jpg/gif/webp 图片" });
+  const buf = Buffer.from(m[2], "base64");
+  if (!buf.length || buf.length > 3 * 1024 * 1024) return res.status(400).json({ error: "图片大小需在 3MB 以内" });
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  const ext = m[1] === "jpeg" ? "jpg" : m[1];
+  const fname = `av${user.id}_${Date.now()}.${ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, fname), buf);
+  if (user.avatar && /^\/uploads\//.test(user.avatar)) {
+    try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(user.avatar))); } catch {}
+  }
+  user.avatar = "/uploads/" + fname;
+  store.save();
+  res.json({ ok: true, avatar: user.avatar });
 });
 
 /* 更换邮箱：验证码发送到新邮箱验证 */
@@ -596,6 +623,7 @@ app.get("/api/topics", (req, res) => {
     return {
       ...t,
       authorGrade: u ? (u.grade ?? null) : null,
+      authorAvatar: u ? (u.avatar || null) : null,
       likeCount: (db.likes[t.id] && db.likes[t.id].op) ? db.likes[t.id].op.length : 0,
     };
   }));
@@ -679,8 +707,9 @@ app.get("/api/topics/:id/replies", (req, res) => {
   };
   res.json((db.replies[req.params.id] || []).map((r) => {
     const lc = (db.likes || {})[req.params.id] || {};
+    const ru = r.uid ? db.users.find((x) => x.id === r.uid) : null;
     return {
-      ...r, grade: r.uid ? gradeOf(r.uid) : null,
+      ...r, avatar: ru ? (ru.avatar || null) : null, grade: r.uid ? gradeOf(r.uid) : null,
       likeCount: lc[r.id] ? lc[r.id].length : 0,
     };
   }));

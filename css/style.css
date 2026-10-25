@@ -273,8 +273,13 @@ html[data-theme="light"] {
 .avatar {
   --c: #e07b39; width: 34px; height: 34px; border-radius: 50%;
   background: var(--c); color: #fff; display: inline-flex; flex: none;
-  align-items: center; justify-content: center; font-size: 15px;
+  align-items: center; justify-content: center; font-size: 15px; overflow: hidden;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 头像上传行 */
+.av-row { display: flex; align-items: center; gap: 14px; }
+.avatar-lg { width: 56px; height: 56px; font-size: 24px; }
+.av-btns { display: flex; flex-direction: column; gap: 8px; }
 
 /* ---------- 话题详情 ---------- */
 .topic-head { padding: 4px 4px 16px; }
