@@ -488,22 +488,18 @@
         const replyImgs = (r) => (r.images && r.images.length)
           ? `<div class="c-imgs">${r.images.map((u) => `<img class="c-img" src="${u}" alt="图片" loading="lazy">`).join("")}</div>` : "";
 
-        /* 评论行（bbs-go 扁平风）：楼主徽章 + 年级头衔 + 删除（本人/帖主/管理员） */
+        /* 评论行（bbs-go 扁平风）：楼主徽章 + 年级头衔 + 删除（本人/帖主/管理员）；私信入口只在右侧作者卡 */
         const gradeBadge = (g) => g ? `<span class="grade-badge">${g}</span>` : "";
         const replyHTML = (r, isChild) => {
           const isOp = (r.uid && r.uid === t.uid) || (!r.uid && r.user === t.author);
           const canDel = meNow && ((r.uid && r.uid === meNow.id) || (t.uid && t.uid === meNow.id) || meNow.role === "admin");
-          const canDM = meNow && r.uid && r.uid !== meNow.id;
-          const dmLink = (inner) => canDM
-            ? `<a class="cmt-user" href="messages.html?to=${r.uid}" title="发私信">${inner}</a>`
-            : `<span class="cmt-user">${inner}</span>`;
           const grade = r.grade ?? t.category;
           return `
           <div class="cmt${isChild ? " child" : ""}" data-rid="${r._id}">
-            ${dmLink(avatar(r.user, r.color, "", r.avatar))}
+            ${avatar(r.user, r.color, "", r.avatar)}
             <div class="cmt-main">
               <div class="cmt-head">
-                ${dmLink(`<b>${esc(r.user)}</b>`)}
+                <b>${esc(r.user)}</b>
                 ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
                 ${gradeBadge(grade)}
                 <time>${fmtTime(r.time)}</time>
@@ -513,7 +509,6 @@
               <div class="cmt-actions">
                 <button class="act-btn act-like" data-target="${r.id}">❤ <b>${r.likeCount || 0}</b></button>
                 <button class="act-btn act-reply" data-rid="${r._id}" data-nick="${esc(r.user)}">💬 回复</button>
-                ${canDM ? `<a class="act-btn" href="messages.html?to=${r.uid}">✉ 私信</a>` : ""}
                 ${canDel ? `<button class="act-btn act-del" data-rid="${r._id}" title="删除（其下回复一并删除）">🗑 删除</button>` : ""}
               </div>
             </div>
