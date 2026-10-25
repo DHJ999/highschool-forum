@@ -312,7 +312,7 @@ html[data-theme="light"] {
 .post-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-top: 6px; }
 .pc-head { display: flex; align-items: center; gap: 12px; padding: 15px 22px; border-bottom: 1px solid var(--border); }
 .pc-who b { display: block; font-size: 14.5px; }
-.pc-who time { font-size: 12px; color: var(--muted); }
+.pc-who time { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .pc-head .btn { margin-left: auto; }
 .pc-body { padding: 22px 26px 6px; }
 .pc-body p { margin: 0 0 18px; font-size: 15.5px; line-height: 1.9; }
@@ -394,10 +394,12 @@ html[data-theme="light"] {
 .cmt { display: flex; gap: 12px; padding: 14px 0; border-top: 1px dashed var(--border); }
 .cmt .avatar { width: 34px; height: 34px; font-size: 14px; flex: none; margin-top: 2px; }
 .cmt-main { flex: 1; min-width: 0; }
-.cmt-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.cmt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .cmt-head > * { white-space: nowrap; }
-.cmt-head b { font-size: 13.5px; }
-.cmt-head time { font-size: 12px; color: var(--muted); }
+.cmt-who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.cmt-who b { font-size: 13.5px; }
+.cmt-meta { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.cmt-meta time { font-size: 12px; color: var(--muted); }
 .cmt-text { margin: 0 0 6px; font-size: 14.5px; line-height: 1.75; white-space: pre-wrap; }
 .cmt-actions { display: flex; gap: 14px; }
 .cmt.child { margin-left: 46px; }
@@ -559,10 +561,18 @@ html[data-theme="light"] {
   .auth-user { padding: 4px 6px; }
   .msg-link { padding: 7px 9px; font-size: 13px; }
   .top-actions .btn-accent { padding: 7px 9px; }
-  /* 评论头部：间距收紧，楼中楼缩进减小；年级徽章让位给头衔，保持单行 */
-  .cmt-head { gap: 5px 6px; }
-  .cmt-head .grade-badge { display: none; }
+  /* 评论头部：间距收紧，楼中楼缩进减小 */
+  .cmt-head { gap: 5px; }
   .cmt.child { margin-left: 22px; }
+  /* 评论卡收紧内边距与字号，保证「名+头衔 | 年级+时间」单行放下 */
+  .comments-card { padding: 16px 14px; }
+  .cmt { gap: 8px; }
+  .cmt .avatar { width: 30px; height: 30px; font-size: 13px; }
+  .cmt-who { gap: 5px; }
+  .cmt-who b { font-size: 12.5px; }
+  .cmt-meta { gap: 5px; }
+  .cmt-meta time { font-size: 11px; }
+  .cmt-head .lv-badge, .cmt-head .grade-badge { padding: 0 4px; }
 }
 
 /* 超窄屏（≤420px）：消息按钮只留图标+红点，顶栏再收紧 */

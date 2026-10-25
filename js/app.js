@@ -521,11 +521,12 @@
             ${avatar(r.user, r.color, "", r.avatar)}
             <div class="cmt-main">
               <div class="cmt-head">
-                <b>${esc(r.user)}</b>
-                ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
-                ${lvBadge(r)}
-                ${gradeBadge(grade)}
-                <time>${fmtTime(r.time)}</time>
+                <span class="cmt-who">
+                  <b>${esc(r.user)}</b>
+                  ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
+                  ${lvBadge(r)}
+                </span>
+                <span class="cmt-meta">${gradeBadge(grade)}<time>${fmtTime(r.time)}</time></span>
               </div>
               <p class="cmt-text">${esc(r.text)}</p>
               ${replyImgs(r)}
