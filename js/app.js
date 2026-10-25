@@ -92,7 +92,7 @@
     if (e.key === "Escape") { lb.classList.remove("open"); $$(".pop").forEach((p) => p.classList.remove("open")); }
   });
   document.addEventListener("click", (e) => {
-    const img = e.target.closest(".p-images img");
+    const img = e.target.closest(".pc-imgs img, .p-images img, .c-imgs img");
     if (img) {
       lb.querySelector("img").src = img.src;
       lb.querySelector(".lb-cap").textContent = img.dataset.cap || img.alt || "";
