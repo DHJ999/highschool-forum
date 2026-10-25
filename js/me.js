@@ -108,7 +108,7 @@
 
       <div class="list-tabs me-tabs">
         <button class="on" data-t="topics">我发布的（${topics.length}）</button>
-        <button data-t="replies">我的回复（${replies.length}）</button>
+        <button data-t="replies">我评论的（${replies.length}）</button>
         <button data-t="favs">我的收藏（${validFavs.length}）</button>
       </div>
 
@@ -149,12 +149,12 @@
           <div class="me-row-main">
             <p class="me-reply-text">${esc(r.text)}</p>
             <div class="t-badges">
-              <span class="chip">回复于 <a href="topic.html?id=${r.topicId}" style="color:var(--accent-strong)">${esc(titleOf(r.topicId))}</a></span>
+              <span class="chip">评论于 <a href="topic.html?id=${r.topicId}" style="color:var(--accent-strong)">${esc(titleOf(r.topicId))}</a></span>
               <span class="me-row-time">${relTime(r.time)}</span>
             </div>
           </div>
           <button class="act-btn link-danger" data-del-reply="${r.topicId}/${r.id}">删除</button>
-        </div>`).join("") : '<p class="me-empty">还没有回复过别人的话题。</p>';
+        </div>`).join("") : '<p class="me-empty">还没有评论过别人的帖子。</p>';
 
       $$("#meReplies [data-del-reply]").forEach((b) => b.addEventListener("click", async () => {
         if (!(await window.confirmDialog("确定删除这条评论？"))) return;
