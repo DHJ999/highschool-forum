@@ -257,13 +257,13 @@ app.get("/api/users/:id/relation", (req, res) => {
 });
 
 /* ---------- 通知 ---------- */
-function notifyTo(toUid, fromUser, text, topicId) {
+function notifyTo(toUid, fromUser, text, topicId, type) {
   if (toUid === fromUser.id) return; /* 自己的操作不通知自己 */
   db.notifications = db.notifications || [];
   db.notifications.push({
     id: "n" + store.nextId("replyId"),
     to: toUid, from: fromUser.id, fromName: fromUser.nickname, fromColor: fromUser.color,
-    text, topicId, time: Date.now(), read: false,
+    text, topicId, type, time: Date.now(), read: false,
   });
   /* 每人最多保留 50 条，超出删最旧 */
   const mine = db.notifications.filter((n) => n.to === toUid);
@@ -299,7 +299,7 @@ app.post("/api/topics/:id/like", (req, res) => {
   let liked;
   if (i >= 0) { set.splice(i, 1); liked = false; }
   else { set.push(user.id); liked = true; }
-  if (liked && ownerUid && ownerUid !== user.id) notifyTo(ownerUid, user, text, tid);
+  if (liked && ownerUid && ownerUid !== user.id) notifyTo(ownerUid, user, text, tid, "like");
   store.save();
   res.json({ ok: true, liked, count: set.length });
 });
@@ -313,10 +313,35 @@ app.get("/api/me/notifications", (req, res) => {
   res.json({
     unread: mine.filter((n) => !n.read).length,
     list: mine.slice(0, 50).map((n) => ({
-      id: n.id, fromName: n.fromName, fromColor: n.fromColor,
+      id: n.id, fromName: n.fromName, fromColor: n.fromColor, type: n.type,
       text: n.text, time: n.time, topicId: n.topicId, read: n.read,
     })),
   });
+});
+/* 未读汇总：私信未读 + 通知未读（消息按钮角标用） */
+app.get("/api/me/unread-count", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "请先登录" });
+  db.notifications = db.notifications || [];
+  const notif = db.notifications.filter((n) => n.to === user.id && !n.read).length;
+  let dm = 0;
+  for (const [tid, list] of Object.entries(db.replies || {})) {} /* 占位 */
+  for (const m of db.messages || []) {
+    if (m.to === user.id && !m.read) dm++;
+  }
+  res.json({ dm, notif, total: dm + notif });
+});
+/* 关注我的人（未互关的 = 新的关注） */
+app.get("/api/me/followers", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "请先登录" });
+  db.follows = db.follows || {};
+  res.json((db.follows[user.id] || []).map((uid) => {
+    const u = db.users.find((x) => x.id === uid);
+    if (!u) return null;
+    const mutual = (db.follows[uid] || []).includes(user.id);
+    return { id: u.id, nickname: u.nickname, color: u.color, grade: u.grade ?? null, mutual };
+  }).filter(Boolean).filter((u) => !u.mutual));
 });
 app.post("/api/me/notifications/read", (req, res) => {
   const user = currentUser(req);
@@ -343,7 +368,7 @@ app.post("/api/topics/:id/favorite", (req, res) => {
   /* 通知：收藏了别人的帖子 */
   const topic = db.topics.find((x) => x.id === req.params.id);
   if (favorited && topic && topic.uid && topic.uid !== me.id) {
-    notifyTo(topic.uid, me, `收藏了你的帖子《${topic.title}》`, req.params.id);
+    notifyTo(topic.uid, me, `收藏了你的帖子《${topic.title}》`, req.params.id, "fav");
   }
   store.save();
   res.json({ ok: true, favorited });
@@ -421,6 +446,7 @@ app.get("/api/messages/contacts", (req, res) => {
       time: m.time,
       unread: convOf(me.id, otherId).filter((x) => x.to === me.id && !x.read).length,
       mutual: isMutual(me.id, otherId),
+      iSent: convOf(me.id, otherId).some((x) => x.from === me.id),
     };
   }).sort((a, b) => b.time - a.time);
   res.json(contacts);
@@ -678,9 +704,9 @@ app.post("/api/topics/:id/replies", (req, res) => {
   /* 通知：回复了别人的评论 → 通知评论作者；评论了别人的帖子 → 通知帖子作者 */
   const topic = db.topics.find((x) => x.id === tid);
   const parent = parentId ? (db.replies[tid] || []).find((x) => x.id === parentId) : null;
-  if (parent && parent.uid !== user.id) notifyTo(parent.uid, user, "回复了你的评论", tid);
+  if (parent && parent.uid !== user.id) notifyTo(parent.uid, user, "回复了你的评论", tid, "reply");
   if (topic && topic.uid && topic.uid !== user.id && (!parent || parent.uid !== topic.uid)) {
-    notifyTo(topic.uid, user, `评论了你的帖子《${topic.title}》`, tid);
+    notifyTo(topic.uid, user, `评论了你的帖子《${topic.title}》`, tid, "comment");
   }
   store.save();
   res.json({ ok: true, reply, likeCount: 0 });

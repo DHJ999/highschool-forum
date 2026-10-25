@@ -54,6 +54,7 @@
     const u = window.AUTH.user;
     if (u) {
       area.innerHTML = `
+        <a class="btn btn-ghost msg-link" href="messages.html" title="消息">✉ 消息<span class="cnt-badge" id="msgBadge" hidden></span></a>
         <div class="user-menu" id="userMenu">
           <button class="auth-user" id="btnAvatar" title="个人菜单">
             <span class="avatar" style="--c:${u.color}">${esc(u.nickname[0])}</span>
@@ -83,6 +84,21 @@
       area.querySelector('[data-m="profile"]').addEventListener("click", () => { menu.classList.remove("open"); openProfileEdit(); });
       if (u.role !== "admin") area.querySelector('[data-m="email"]').addEventListener("click", () => { menu.classList.remove("open"); openEmailChange(); });
       area.querySelector('[data-m="grade"]').addEventListener("click", () => { menu.classList.remove("open"); openGradeModal(); });
+
+      /* 消息按钮角标：私信未读 + 通知未读，30 秒轮询 */
+      async function refreshMsgBadge() {
+        try {
+          const d = await (await fetch("/api/me/unread-count")).json();
+          const b = area.querySelector("#msgBadge");
+          if (!b) return;
+          const n = Math.min(d.total || 0, 99);
+          const label = (d.total || 0) > 99 ? "99+" : String(n);
+          b.hidden = (d.total || 0) === 0;
+          b.textContent = label;
+        } catch {}
+      }
+      refreshMsgBadge();
+      setInterval(refreshMsgBadge, 30000);
     } else {
       area.innerHTML = `<a class="btn btn-ghost" href="login.html">登录</a>`;
     }

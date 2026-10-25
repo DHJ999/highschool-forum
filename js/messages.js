@@ -41,26 +41,82 @@
   const chatBox = $("#chat");
   let openUid = null;
   let pollTimer = null;
-  /* ---------- 会话列表 ---------- */
+  /* ---------- 会话列表：普通会话 + 分组合集（点赞/回复/收藏通知、陌生人、新的关注） ---------- */
   async function loadContacts() {
+    let contacts = [], notes = { list: [], unread: 0 }, followers = [];
     try {
-      const list = await (await fetch("/api/messages/contacts")).json();
-      if (!Array.isArray(list)) return;
-      contactsBox.innerHTML = list.length ? list.map((c) => `
-        <div class="contact${c.id === openUid ? " on" : ""}" data-uid="${c.id}">
-          <span class="avatar" style="--c:${c.color}">${esc(c.nickname[0])}</span>
-          <div class="c-main">
-            <div class="c-line"><b>${esc(c.nickname)}</b>${c.mutual ? '<span class="chip mutual">互关</span>' : ""}</div>
-            <p class="c-last">${c.lastFromMe ? "我：" : ""}${esc(c.last)}</p>
-          </div>
-          <div class="c-side">
-            ${c.unread ? `<span class="unread">${c.unread > 9 ? "9+" : c.unread}</span>` : ""}
-            <time>${relTime(c.time)}</time>
-          </div>
-        </div>`).join("") : '<p class="c-empty">还没有会话。去话题页找同学「✉ 消息」吧。</p>';
-      $$(".contact", contactsBox).forEach((el) =>
-        el.addEventListener("click", () => open(+el.dataset.uid)));
-    } catch {}
+      [contacts, notes, followers] = await Promise.all([
+        fetch("/api/messages/contacts").then((r) => r.json()),
+        fetch("/api/me/notifications").then((r) => r.json()),
+        fetch("/api/me/followers").then((r) => r.json()).catch(() => []),
+      ]);
+    } catch { return; }
+    if (!Array.isArray(contacts)) contacts = [];
+    const notifList = Array.isArray(notes.list) ? notes.list : [];
+    const unreadNotif = notes.unread || 0;
+
+    const contactRow = (c) => `
+      <div class="contact${c.id === openUid ? " on" : ""}" data-uid="${c.id}">
+        <span class="avatar" style="--c:${c.color}">${esc(c.nickname[0])}</span>
+        <div class="c-main">
+          <div class="c-line"><b>${esc(c.nickname)}</b>${c.mutual ? '<span class="chip mutual">互关</span>' : ""}</div>
+          <p class="c-last">${c.lastFromMe ? "我：" : ""}${esc(c.last)}</p>
+        </div>
+        <div class="c-side">
+          ${c.unread ? `<span class="unread">${c.unread > 9 ? "9+" : c.unread}</span>` : ""}
+          <time>${relTime(c.time)}</time>
+        </div>
+      </div>`;
+
+    /* 分组：普通会话（互关或我已回复过）；其余进合集 */
+    const normal = contacts.filter((c) => c.mutual || c.iSent);
+    const strangers = contacts.filter((c) => !(c.mutual || c.iSent));
+    const groupByUser = (list) => {
+      const map = new Map();
+      for (const n of list) {
+        const cur = map.get(n.fromName);
+        if (!cur || n.time > cur.time) map.set(n.fromName, { ...n, count: 1 });
+        else cur.count++;
+      }
+      return [...map.values()].sort((a, b) => b.time - a.time);
+    };
+    const notifItem = (n) => `
+      <a class="contact notif" href="topic.html?id=${encodeURIComponent(n.topicId)}">
+        <span class="avatar" style="--c:${n.fromColor}">${esc(n.fromName[0])}</span>
+        <div class="c-main">
+          <div class="c-line"><b>${esc(n.fromName)}</b>${n.count > 1 ? `<span class="chip">${n.count} 条</span>` : ""}</div>
+          <p class="c-last">${esc(n.text)}</p>
+        </div>
+        <div class="c-side"><time>${relTime(n.time)}</time></div>
+      </a>`;
+    const notifGroup = (label, list) => list.length
+      ? `<div class="group-head">${label}</div>${list.map(notifItem).join("")}` : "";
+    const likeNotes = groupByUser(notifList.filter((n) => n.type === "like"));
+    const replyNotes = groupByUser(notifList.filter((n) => n.type === "reply" || n.type === "comment"));
+    const favNotes = groupByUser(notifList.filter((n) => n.type === "fav"));
+
+    let html = "";
+    html += normal.length ? normal.map(contactRow).join("") : "";
+    html += notifGroup("❤ 点赞消息", likeNotes);
+    html += notifGroup("💬 回复消息", replyNotes);
+    html += notifGroup("⭐ 收藏消息", favNotes);
+    html += strangers.length ? `<div class="group-head">👤 陌生人</div>${strangers.map(contactRow).join("")}` : "";
+    html += followers.length ? `<div class="group-head">🔔 新的关注</div>${followers.map((f) => `
+      <div class="contact" data-uid="${f.id}">
+        <span class="avatar" style="--c:${f.color}">${esc(f.nickname[0])}</span>
+        <div class="c-main">
+          <div class="c-line"><b>${esc(f.nickname)}</b><span class="chip">新关注</span></div>
+          <p class="c-last">关注了你，点击开始交流</p>
+        </div>
+      </div>`).join("")}` : "";
+    contactsBox.innerHTML = html || '<p class="c-empty">还没有会话与互动。去话题页找同学「✉ 消息」吧。</p>';
+
+    /* 消息按钮角标：私信未读 + 通知未读 */
+    const dmUnread = contacts.reduce((n, c) => n + (c.unread || 0), 0);
+    window.setMsgBadge?.(dmUnread + unreadNotif);
+
+    $$(".contact[data-uid]", contactsBox).forEach((el) =>
+      el.addEventListener("click", () => open(+el.dataset.uid)));
   }
 
   /* ---------- 聊天窗 ---------- */
