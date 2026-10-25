@@ -149,22 +149,63 @@
       m.querySelectorAll(".swatch").forEach((x) => x.classList.toggle("on", x === s));
     }));
 
-    /* 头像上传：选图后仅本地预览，点“保存”才上传生效 */
-    const compressSquare = (file) => new Promise((resolve) => {
+    /* 裁剪器（Cropper.js，MIT）：按需加载，选图后弹窗让用户拖拽/缩放/旋转调整 */
+    const loadCropper = () => {
+      if (window.Cropper) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "/css/vendor/cropper.min.css?v=1.6.2";
+        document.head.appendChild(link);
+        const s = document.createElement("script");
+        s.src = "/js/vendor/cropper.min.js?v=1.6.2";
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("cropper load failed"));
+        document.head.appendChild(s);
+      });
+    };
+    const openAvatarCropper = (file) => loadCropper().then(() => new Promise((resolve) => {
+      const cm = document.createElement("div");
+      cm.className = "modal-mask open";
+      cm.id = "cropMask";
+      cm.innerHTML = `
+        <div class="modal" id="cropModal">
+          <h3>裁剪头像</h3>
+          <div class="crop-box"><img id="cropImg" alt="待裁剪图片"></div>
+          <p class="av-hint" style="text-align:center">拖动选框选择范围，滚轮或按钮缩放图片</p>
+          <div class="foot" style="align-items:center">
+            <button type="button" class="btn btn-ghost btn-sm" id="cropRotate" title="旋转 90°">↻</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="cropZoomOut" title="缩小">－</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="cropZoomIn" title="放大">＋</button>
+            <span style="flex:1"></span>
+            <button type="button" class="btn btn-ghost" id="cropCancel">取消</button>
+            <button type="button" class="btn btn-primary" id="cropOk">确认裁切</button>
+          </div>
+        </div>`;
+      document.body.appendChild(cm);
       const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
+      const cimg = cm.querySelector("#cropImg");
+      cimg.src = url;
+      const cropper = new Cropper(cimg, {
+        aspectRatio: 1, viewMode: 1, dragMode: "move", autoCropArea: 0.9, background: false,
+      });
+      const done = (val) => {
+        try { cropper.destroy(); } catch {}
         URL.revokeObjectURL(url);
-        const S = Math.min(img.width, img.height);
-        const c = document.createElement("canvas");
-        c.width = c.height = Math.min(400, S);
-        const ctx = c.getContext("2d");
-        ctx.drawImage(img, (img.width - S) / 2, (img.height - S) / 2, S, S, 0, 0, c.width, c.height);
-        c.toBlob((b) => resolve(b), "image/jpeg", 0.9);
+        cm.remove();
+        resolve(val);
       };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-      img.src = url;
-    });
+      cm.querySelector("#cropRotate").addEventListener("click", () => cropper.rotate(90));
+      cm.querySelector("#cropZoomIn").addEventListener("click", () => cropper.zoom(0.1));
+      cm.querySelector("#cropZoomOut").addEventListener("click", () => cropper.zoom(-0.1));
+      cm.querySelector("#cropCancel").addEventListener("click", () => done(null));
+      cm.addEventListener("click", (e) => { if (e.target === cm) done(null); });
+      cm.querySelector("#cropOk").addEventListener("click", () => {
+        const canvas = cropper.getCroppedCanvas({ width: 400, height: 400, imageSmoothingQuality: "high", fillColor: "#fff" });
+        done(canvas ? canvas.toDataURL("image/jpeg", 0.9) : null);
+      });
+    }));
+
     let pending = null;   /* 待保存的新头像 dataURL */
     let removing = false; /* 待保存的“恢复默认”操作 */
     const pv = m.querySelector("#avPreview");
@@ -175,15 +216,17 @@
       const f = e.target.files[0];
       e.target.value = "";
       if (!f) return;
-      const blob = await compressSquare(f);
-      if (!blob) { m.querySelector("#peErr").textContent = "图片读取失败"; return; }
-      pending = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+      m.querySelector("#peErr").textContent = "";
+      let dataUrl = null;
+      try { dataUrl = await openAvatarCropper(f); }
+      catch { m.querySelector("#peErr").textContent = "裁剪组件加载失败，请检查网络后重试"; return; }
+      if (!dataUrl) return; /* 用户在裁剪窗点了取消 */
+      pending = dataUrl;
       removing = false;
       pv.innerHTML = `<img src="${pending}" alt="">`;
       pv.classList.add("pending");
       hint.hidden = false;
       hint.textContent = "已选择新头像，点击下方「保存」后生效";
-      m.querySelector("#peErr").textContent = "";
     });
     m.querySelector("#avReset").addEventListener("click", () => {
       pending = null;
