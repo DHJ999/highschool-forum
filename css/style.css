@@ -172,6 +172,9 @@ button { font-family: inherit; }
 .side-item:hover { background: var(--hover); }
 .side-item.active { background: var(--hover); color: var(--accent-strong); }
 .side-item .cnt { margin-left: auto; font-size: 12px; color: var(--muted); }
+/* 名称与火苗固定槽位：多行火苗列对齐 */
+.side-item .lbl { flex: none; min-width: 68px; }
+.side-item .fires { flex: none; min-width: 58px; text-align: left; letter-spacing: 1px; }
 .cat-dot { width: 11px; height: 11px; border-radius: 2.5px; flex: none; }
 .tag-ic { color: var(--muted); font-size: 13px; flex: none; }
 

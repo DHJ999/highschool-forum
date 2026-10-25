@@ -256,7 +256,7 @@
     }
     $("#sideCats").innerHTML = catList.map((c, i) => `
       <a class="side-item ${activeCat === c.id ? "active" : ""}" href="index.html?cat=${c.id}">
-        <span class="cat-dot" style="background:${c.color}"></span>${c.label} ${firesByRank(i)}
+        <span class="cat-dot" style="background:${c.color}"></span><span class="lbl">${c.label}</span><span class="fires">${firesByRank(i)}</span>
         <span class="cnt">${c.n}</span>
       </a>`).join("");
 
@@ -267,7 +267,7 @@
     }
     $("#sideTags").innerHTML = tagList.map(([g, n], i) => `
       <a class="side-item ${activeTag === g ? "active" : ""}" href="index.html?tag=${encodeURIComponent(g)}">
-        <span class="tag-ic">#</span>${esc(g)} ${firesByRank(i)}
+        <span class="tag-ic">#</span><span class="lbl">${esc(g)}</span><span class="fires">${firesByRank(i)}</span>
         <span class="cnt">${n}</span>
       </a>`).join("");
   }

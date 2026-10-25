@@ -274,6 +274,18 @@ app.get("/api/me/favorites", (req, res) => {
   db.favorites = db.favorites || {};
   res.json(db.favorites[me.id] || []);
 });
+/* 客户端自愈：把已失效（帖子被删）的收藏 ID 从列表中清除 */
+app.post("/api/me/favorites", (req, res) => {
+  const me = currentUser(req);
+  if (!me) return res.status(401).json({ error: "请先登录" });
+  const set = Array.isArray((req.body || {}).set)
+    ? [...new Set(req.body.set.map(String).slice(0, 200))] : null;
+  if (!set) return res.status(400).json({ error: "参数错误" });
+  db.favorites = db.favorites || {};
+  db.favorites[me.id] = set;
+  store.save();
+  res.json({ ok: true, favorites: set });
+});
 
 /* ---------- 图片上传（登录即可，私信/后续发帖图用） ---------- */
 const UPLOAD_DIR = path.join(__dirname, "data", "uploads");
@@ -532,6 +544,12 @@ app.delete("/api/topics/:id", (req, res) => {
   if (!admin && t.uid !== user.id) return res.status(403).json({ error: "只能删除自己的话题" });
   db.topics = db.topics.filter((x) => x.id !== t.id);
   delete db.replies[t.id];
+  /* 同步清理所有用户收藏中的该话题 */
+  if (db.favorites) {
+    for (const k of Object.keys(db.favorites)) {
+      db.favorites[k] = db.favorites[k].filter((x) => x !== t.id);
+    }
+  }
   store.save();
   res.json({ ok: true });
 });
@@ -694,6 +712,12 @@ app.delete("/api/admin/topics/:id", requireAdmin, (req, res) => {
   if (!t) return res.status(404).json({ error: "话题不存在" });
   db.topics = db.topics.filter((x) => x.id !== t.id);
   delete db.replies[t.id];
+  /* 同步清理所有用户收藏中的该话题 */
+  if (db.favorites) {
+    for (const k of Object.keys(db.favorites)) {
+      db.favorites[k] = db.favorites[k].filter((x) => x !== t.id);
+    }
+  }
   store.save();
   res.json({ ok: true });
 });

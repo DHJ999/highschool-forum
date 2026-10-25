@@ -75,6 +75,17 @@
       allTopics.find((t) => String(t.id) === String(tid)) ||
       DATA.topics.find((t) => String(t.id) === String(tid));
 
+    /* 收藏自愈：帖子已被删除的收藏 ID 过滤掉，并回写服务端保持计数一致 */
+    const validFavs = favIds.filter((tid) => topicById(tid));
+    if (validFavs.length !== favIds.length) {
+      try {
+        await fetch("/api/me/favorites", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ set: validFavs }),
+        });
+      } catch {}
+    }
+
     const titleOf = (tid) => {
       const local = DATA.topics.find((t) => String(t.id) === String(tid));
       const server = allTopics.find((t) => String(t.id) === String(tid));
@@ -98,7 +109,7 @@
       <div class="list-tabs me-tabs">
         <button class="on" data-t="topics">我发布的（${topics.length}）</button>
         <button data-t="replies">我的回复（${replies.length}）</button>
-        <button data-t="favs">我的收藏（${favIds.length}）</button>
+        <button data-t="favs">我的收藏（${validFavs.length}）</button>
       </div>
 
       <div id="meTopics" class="me-panel"></div>
@@ -157,7 +168,7 @@
     }
 
     function renderFavs() {
-      $("#meFavs").innerHTML = favIds.length ? favIds.map((tid) => {
+      $("#meFavs").innerHTML = validFavs.length ? validFavs.map((tid) => {
         const t = topicById(tid);
         if (!t) return "";
         const c = catById(t.category);
