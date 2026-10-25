@@ -328,6 +328,29 @@
 
   const err = (msg) => { $("#authErr", mask).textContent = msg; };
 
+  /* ---------- 站内二次确认弹窗（替代原生 confirm，内嵌浏览器不显示原生弹窗） ---------- */
+  window.confirmDialog = (msg) => new Promise((resolve) => {
+    let m = document.querySelector("#cdMask");
+    if (m) m.remove();
+    m = document.createElement("div");
+    m.className = "modal-mask open";
+    m.id = "cdMask";
+    m.innerHTML = `
+      <div class="modal" style="max-width:380px">
+        <h3 style="margin:0 0 10px">确认操作</h3>
+        <p style="color:var(--muted);font-size:14px;margin:0 0 18px;white-space:pre-line">${esc(msg)}</p>
+        <div class="foot">
+          <button type="button" class="btn btn-ghost" id="cdNo">取消</button>
+          <button type="button" class="btn btn-primary" id="cdYes" style="background:var(--like)">确定删除</button>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+    const done = (v) => { m.remove(); resolve(v); };
+    m.addEventListener("click", (e) => { if (e.target === m) done(false); });
+    m.querySelector("#cdNo").addEventListener("click", () => done(false));
+    m.querySelector("#cdYes").addEventListener("click", () => done(true));
+  });
+
   /* 密码框小眼睛：切换明文/密文 */
   $$(".pw-eye", mask).forEach((eye) => {
     eye.addEventListener("click", () => {

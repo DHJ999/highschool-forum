@@ -123,7 +123,7 @@
       }).join("") : '<p class="me-empty">还没有发布过帖子，<a href="index.html" style="color:var(--accent)">去写第一篇</a>。</p>';
 
       $$("#meTopics [data-del-topic]").forEach((b) => b.addEventListener("click", async () => {
-        if (!confirm("确定删除这个话题及其全部回复？")) return;
+        if (!(await window.confirmDialog("确定删除这个帖子及其全部评论？"))) return;
         const r = await fetch("/api/topics/" + b.dataset.delTopic, { method: "DELETE" });
         const d = await r.json();
         if (!r.ok) { toast(d.error || "删除失败"); return; }
@@ -146,7 +146,7 @@
         </div>`).join("") : '<p class="me-empty">还没有回复过别人的话题。</p>';
 
       $$("#meReplies [data-del-reply]").forEach((b) => b.addEventListener("click", async () => {
-        if (!confirm("确定删除这条回复？")) return;
+        if (!(await window.confirmDialog("确定删除这条评论？"))) return;
         const [tid, rid] = b.dataset.delReply.split("/");
         const r = await fetch(`/api/replies/${encodeURIComponent(tid)}/${encodeURIComponent(rid)}`, { method: "DELETE" });
         const d = await r.json();

@@ -256,7 +256,7 @@
     }
     $("#sideCats").innerHTML = catList.map((c, i) => `
       <a class="side-item ${activeCat === c.id ? "active" : ""}" href="index.html?cat=${c.id}">
-        <span class="cat-dot" style="background:${c.color}"></span>${firesByRank(i)} ${c.label}
+        <span class="cat-dot" style="background:${c.color}"></span>${c.label} ${firesByRank(i)}
         <span class="cnt">${c.n}</span>
       </a>`).join("");
 
@@ -267,7 +267,8 @@
     }
     $("#sideTags").innerHTML = tagList.map(([g, n], i) => `
       <a class="side-item ${activeTag === g ? "active" : ""}" href="index.html?tag=${encodeURIComponent(g)}">
-        <span class="tag-ic">#</span>${firesByRank(i)} ${esc(g)}<span class="cnt">${n}</span>
+        <span class="tag-ic">#</span>${esc(g)} ${firesByRank(i)}
+        <span class="cnt">${n}</span>
       </a>`).join("");
   }
 
@@ -657,10 +658,20 @@
           toast(t._fav ? "已收藏，可在个人中心查看" : "已取消收藏");
         });
 
-        /* 删除评论（本人/帖主/管理员）：其下所有回复级联删除 */
+        /* 帖子右上角删除（作者/管理员）：二次确认后删除并返回首页 */
+        $("#delTopic")?.addEventListener("click", async () => {
+          if (!(await window.confirmDialog("确定删除这个帖子及其全部评论？\n删除后无法恢复。"))) return;
+          const r = await fetch("/api/topics/" + encodeURIComponent(t.id), { method: "DELETE" });
+          const d = await r.json();
+          if (!r.ok) { toast(d.error || "删除失败"); return; }
+          toast("帖子已删除");
+          setTimeout(() => location.href = "index.html", 600);
+        });
+
+        /* 删除评论（本人/帖主/管理员）：二次确认，其下所有回复级联删除 */
         $$(".act-del", root).forEach((btn) => {
           btn.addEventListener("click", async () => {
-            if (!confirm("删除这条评论？其下所有回复将一并删除。")) return;
+            if (!(await window.confirmDialog("删除这条评论？\n其下所有回复将一并删除。"))) return;
             const r = await fetch(`/api/replies/${encodeURIComponent(t.id)}/${encodeURIComponent(btn.dataset.rid)}`, { method: "DELETE" });
             const d = await r.json();
             if (!r.ok) { toast(d.error || "删除失败"); return; }

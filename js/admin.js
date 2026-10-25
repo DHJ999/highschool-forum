@@ -44,6 +44,31 @@
 
   let userQuery = "";
 
+  /* 站内二次确认（admin 页不加载 auth.js，本地兜底实现） */
+  if (!window.confirmDialog) {
+    window.confirmDialog = (msg) => new Promise((resolve) => {
+      let m = document.querySelector("#cdMask");
+      if (m) m.remove();
+      m = document.createElement("div");
+      m.className = "modal-mask open";
+      m.id = "cdMask";
+      m.innerHTML = `
+        <div class="modal" style="max-width:380px">
+          <h3 style="margin:0 0 10px">确认操作</h3>
+          <p style="color:var(--muted);font-size:14px;margin:0 0 18px;white-space:pre-line">${esc(msg)}</p>
+          <div class="foot">
+            <button type="button" class="btn btn-ghost" id="cdNo">取消</button>
+            <button type="button" class="btn btn-primary" id="cdYes" style="background:var(--like)">确定</button>
+          </div>
+        </div>`;
+      document.body.appendChild(m);
+      const done = (v) => { m.remove(); resolve(v); };
+      m.addEventListener("click", (e) => { if (e.target === m) done(false); });
+      m.querySelector("#cdNo").addEventListener("click", () => done(false));
+      m.querySelector("#cdYes").addEventListener("click", () => done(true));
+    });
+  }
+
   const root = $("#admRoot");
 
   /* ---------- 登录 ---------- */
@@ -195,7 +220,7 @@
       if (r.ok) { toast("已更新置顶状态"); renderDash(); } else toast((await r.json()).error || "操作失败");
     }));
     $$("[data-del-topic]", root).forEach((b) => b.addEventListener("click", async () => {
-      if (!confirm("确定删除该话题及其全部回复？")) return;
+      if (!(await window.confirmDialog("确定删除该话题及其全部评论？"))) return;
       const r = await fetch("/api/admin/topics/" + b.dataset.delTopic, { method: "DELETE" });
       if (r.ok) { toast("已删除"); renderDash(); } else toast((await r.json()).error || "操作失败");
     }));
@@ -237,7 +262,7 @@
       openResetPw(users.find((u) => u.id === +b.dataset.resetPw))));
     $$("[data-del-user]", box).forEach((b) => b.addEventListener("click", async () => {
       const u = users.find((x) => x.id === +b.dataset.delUser);
-      if (!confirm(`删除用户「${u.nickname}」将同时删除其全部话题与回复，确定？`)) return;
+      if (!(await window.confirmDialog(`删除用户「${u.nickname}」将同时删除其全部话题与评论，确定？`))) return;
       const r = await fetch("/api/admin/users/" + u.id, { method: "DELETE" });
       if (r.ok) { toast("已删除"); renderDash(); } else toast((await r.json()).error || "操作失败");
     }));
@@ -268,7 +293,7 @@
     m.querySelector("#pwForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const pw = m.querySelector("#pwVal").value;
-      if (!confirm(`二次确认：确定将「${u.nickname}」的密码重置为「${pw}」吗？\n重置后该用户将在所有设备退出登录。`)) return;
+      if (!(await window.confirmDialog(`二次确认：确定将「${u.nickname}」的密码重置为「${pw}」吗？\n重置后该用户将在所有设备退出登录。`))) return;
       const r = await fetch(`/api/admin/users/${u.id}/password`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pw }),
