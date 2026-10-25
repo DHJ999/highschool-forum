@@ -266,12 +266,56 @@ button { font-family: inherit; }
 }
 .p-text { margin: 0 0 10px; font-size: 15px; line-height: 1.9; }
 .p-text:first-of-type { font-size: 15.5px; }
-/* 主楼正文：文章化排版，区别于评论 */
-.post-list > .post:first-child .p-text {
-  font-size: 16.5px; line-height: 2.1; margin: 0 0 22px;
-  font-family: Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  letter-spacing: 0.01em; text-align: justify;
+/* 主楼正文：bbs-go 扁平卡片风（干净普通字） */
+.post-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-top: 6px; }
+.pc-head { display: flex; align-items: center; gap: 12px; padding: 15px 22px; border-bottom: 1px solid var(--border); }
+.pc-who b { display: block; font-size: 14.5px; }
+.pc-who time { font-size: 12px; color: var(--muted); }
+.pc-head .btn { margin-left: auto; }
+.pc-body { padding: 22px 26px 6px; }
+.pc-body p { margin: 0 0 18px; font-size: 15.5px; line-height: 1.9; }
+.pc-imgs { padding: 0 26px 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.pc-imgs figure { margin: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.pc-imgs img { width: 100%; aspect-ratio: 4/3; object-fit: cover; cursor: zoom-in; }
+.pc-imgs figcaption { font-size: 11.5px; color: var(--muted); text-align: center; padding: 5px; }
+.pc-badges { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 26px 16px; }
+.pc-actions { display: flex; border-top: 1px solid var(--border); background: var(--card); }
+.pa-item {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: none; border: 0; border-right: 1px solid var(--border);
+  color: var(--muted); font: inherit; font-size: 13.5px; padding: 12px 0; cursor: pointer;
 }
+.pa-item:last-child { border-right: 0; }
+.pa-item:hover { color: var(--accent-strong); background: var(--hover); }
+.pa-item b { color: var(--text); font-weight: 600; }
+.pa-item.act-like.liked, .pa-item.act-like.liked b { color: var(--like); }
+
+/* ---------- 评论卡（bbs-go 风格） ---------- */
+.comments-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-top: 18px; }
+.comments-card h3 { margin: 0 0 14px; font-size: 16px; }
+.cbox { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; }
+.cbox textarea {
+  width: 100%; border: 0; background: none; outline: none; resize: vertical;
+  color: var(--text); font: inherit; font-size: 14px; min-height: 44px;
+}
+.cbox-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.cbox-foot .icon-btn { font-size: 17px; padding: 4px 7px; }
+.c-stage { display: flex; gap: 8px; }
+.c-stage .stage img { max-height: 64px; }
+.c-imgs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.c-imgs .c-img { max-width: 180px; max-height: 140px; border-radius: 8px; cursor: zoom-in; border: 1px solid var(--border); }
+
+/* 评论行 */
+.cmt { display: flex; gap: 12px; padding: 14px 0; border-top: 1px dashed var(--border); }
+.cmt .avatar { width: 34px; height: 34px; font-size: 14px; flex: none; margin-top: 2px; }
+.cmt-main { flex: 1; min-width: 0; }
+.cmt-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.cmt-head b { font-size: 13.5px; }
+.cmt-head time { font-size: 12px; color: var(--muted); }
+.cmt-text { margin: 0 0 6px; font-size: 14.5px; line-height: 1.75; white-space: pre-wrap; }
+.cmt-actions { display: flex; gap: 14px; }
+.cmt.child { margin-left: 46px; }
+.rbox-slot + .cmt.child { margin-top: -6px; }
 .p-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 10px 0 12px; }
 .p-images figure { margin: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card); }
 .p-images img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; cursor: zoom-in; }

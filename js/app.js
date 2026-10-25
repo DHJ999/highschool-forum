@@ -175,6 +175,7 @@
 
     if (opt.author) {
       const a = opt.author;
+      const me = window.AUTH && window.AUTH.user;
       html += `
       <div class="rail-card">
         <h4>作者</h4>
@@ -183,8 +184,10 @@
           <div><b>${esc(a.author)}</b><span>${catById(a.category) ? catById(a.category).label : ""}</span></div>
         </div>
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 4px">发布于 ${fmtTime(a.created)}</p>
-        ${a.uid ? `<div class="rail-btns" style="margin-top:8px">
-          <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 私信作者</a>
+        ${me && a.uid && a.uid !== me.id ? `
+        <div class="rail-btns" style="margin-top:8px">
+          <button class="btn btn-primary" id="railFollow" data-uid="${a.uid}">＋ 关注</button>
+          <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 私信</a>
         </div>` : ""}
       </div>`;
     }
@@ -212,6 +215,18 @@
     }
 
     rail.innerHTML = html;
+    /* 作者卡关注按钮 */
+    const rf = rail.querySelector("#railFollow");
+    rf?.addEventListener("click", async () => {
+      const r = await fetch(`/api/users/${rf.dataset.uid}/follow`, { method: "POST" });
+      const d = await r.json();
+      if (r.ok) {
+        rf.textContent = d.following ? "✓ 已关注" : "＋ 关注";
+        rf.classList.toggle("btn-primary", !d.following);
+        rf.classList.toggle("btn-ghost", d.following);
+        toast(d.following ? "已关注" : "已取消关注");
+      } else toast(d.error || "操作失败");
+    });
   }
   window.__renderRail = renderRail;
 
@@ -437,101 +452,82 @@
           else tops.push(r);
         });
         const nickOf = (rid) => (rs.find((x) => x._id === rid) || {}).user || "";
+        const meNow = window.AUTH && window.AUTH.user;
+        const canDelTopic = meNow && t.uid && (t.uid === meNow.id || meNow.role === "admin");
 
-        const replyPostHTML = (r, isChild) => `
-            <div class="post${isChild ? " child" : ""}" data-rid="${r._id}">
-              <div class="p-left">${avatar(r.user, r.color)}<span class="p-name">${esc(r.user)}</span></div>
-              <div class="p-body">
-                <div class="p-head">
-                  <b>${esc(r.user)}</b>
-                  ${isChild && r._parent ? `<span class="reply-to">↩ ${esc(nickOf(r._parent) || "")}</span>` : ""}
-                  <time>${fmtTime(r.time)}</time>
-                </div>
-                <p class="p-text">${esc(r.text)}</p>
-                <div class="p-actions">
-                  <button class="act-btn act-like" data-k="${likeKey(r._idx)}">❤ <b>${likesFor(t, r._idx)}</b></button>
-                  <button class="act-btn act-reply" data-rid="${r._id}" data-nick="${esc(r.user)}">💬 回复</button>
-                  ${isChild ? "" : `<span class="p-floor">#${r._idx + 2}</span>`}
-                </div>
+        const replyImgs = (r) => (r.images && r.images.length)
+          ? `<div class="c-imgs">${r.images.map((u) => `<img class="c-img" src="${u}" alt="图片" loading="lazy">`).join("")}</div>` : "";
+
+        /* 评论行（bbs-go 扁平风） */
+        const replyHTML = (r, isChild) => `
+          <div class="cmt${isChild ? " child" : ""}" data-rid="${r._id}">
+            ${avatar(r.user, r.color)}
+            <div class="cmt-main">
+              <div class="cmt-head"><b>${esc(r.user)}</b><time>${fmtTime(r.time)}</time></div>
+              <p class="cmt-text">${esc(r.text)}</p>
+              ${replyImgs(r)}
+              <div class="cmt-actions">
+                <button class="act-btn act-like" data-k="${likeKey(r._idx)}">❤ <b>${likesFor(t, r._idx)}</b></button>
+                <button class="act-btn act-reply" data-rid="${r._id}" data-nick="${esc(r.user)}">💬 回复</button>
               </div>
             </div>
-            <div class="rbox-slot" data-slot="${r._id}"></div>
-            ${(kids[r._id] || []).map((c) => replyPostHTML(c, true)).join("")}`;
+          </div>
+          <div class="rbox-slot" data-slot="${r._id}"></div>
+          ${(kids[r._id] || []).map((c) => replyHTML(c, true)).join("")}`;
 
         root.innerHTML = `
           <header class="topic-head">
             <h1>${t.pinned ? "📌 " : ""}${esc(t.title)}</h1>
-            <div class="t-badges">${catChip(t.category)}${tagChips(t.tags)}</div>
-            <div class="topic-meta">
-              ${avatar(t.author, t.color)}<b>${esc(t.author)}</b>
-              <span>发布于 ${fmtTime(t.created)}</span>
-              <span>· ${rs.length + 1} 条回复</span><span>· ${viewCount(t)} 次浏览</span>
-            </div>
-            <div class="topic-actions" id="topicActions"></div>
           </header>
-          <div class="post-list">
-            <div class="post">
-              <div class="p-left">${avatar(t.author, t.color)}<span class="p-name">${esc(t.author)}</span></div>
-              <div class="p-body">
-                <div class="p-head"><b>${esc(t.author)}</b><span class="p-op-badge">楼主</span><time>${fmtTime(t.created)}</time></div>
-                ${t.body.map((p) => `<p class="p-text">${esc(p)}</p>`).join("")}
-                ${t.images.length ? `<div class="p-images">${t.images.map((m) => `
-                  <figure><img src="${m.src}" alt="${esc(m.caption)}" data-cap="${esc(m.caption)}" loading="lazy"><figcaption>${esc(m.caption)}</figcaption></figure>`).join("")}</div>` : ""}
-                <div class="p-actions">
-                  <button class="act-btn act-like" data-k="op">❤ <b>${likesFor(t, -1)}</b></button>
-                  <button class="act-btn act-reply" data-rid="op" data-nick="${esc(t.author)}">💬 回复</button>
-                  <span class="p-floor">#1</span>
-                </div>
+          <div class="post-card">
+            <div class="pc-head">
+              ${avatar(t.author, t.color)}
+              <div class="pc-who"><b>${esc(t.author)}</b><time>发布于 ${fmtTime(t.created)}</time></div>
+              ${canDelTopic ? '<button class="btn btn-ghost btn-sm" id="delTopic">🗑 删除</button>' : ""}
+            </div>
+            <div class="pc-body">${t.body.map((p) => `<p>${esc(p)}</p>`).join("")}</div>
+            ${t.images.length ? `<div class="pc-imgs">${t.images.map((m) => `
+              <figure><img src="${m.src}" alt="${esc(m.caption || "")}" data-cap="${esc(m.caption || "")}" loading="lazy"><figcaption>${esc(m.caption || "")}</figcaption></figure>`).join("")}</div>` : ""}
+            <div class="pc-badges">${catChip(t.category)}${tagChips(t.tags)}</div>
+            <div class="pc-actions">
+              <span class="pa-item" title="浏览量">👁 浏览 <b>${viewCount(t)}</b></span>
+              <button class="pa-item act-like" data-k="op">❤ 点赞 <b>${likesFor(t, -1)}</b></button>
+              <button class="pa-item" id="paComment">💬 评论 <b>${rs.length}</b></button>
+              <button class="pa-item" id="paFav">${t._fav ? "⭐ 已收藏" : "☆ 收藏"}</button>
+            </div>
+          </div>
+          <div class="comments-card">
+            <h3>评论（${rs.length}）</h3>
+            <div class="cbox">
+              <textarea id="rText" rows="2" placeholder="请输入您要发表的内容"></textarea>
+              <div class="cbox-foot">
+                <div class="c-stage" id="cStage" hidden></div>
+                <button type="button" class="icon-btn" id="cImgBtn" title="添加图片">🖼</button>
+                <input type="file" id="cImgInput" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+                <button class="btn btn-primary btn-sm" id="rSubmit" style="margin-left:auto">发布</button>
               </div>
             </div>
-            ${tops.map((r) => replyPostHTML(r, false)).join("")}
-          </div>
-          <div class="composer">
-            <h3>回复话题</h3>
-            <textarea id="rText" rows="3" placeholder="写下你想起的那件事……"></textarea>
-            <div class="foot"><button class="btn btn-primary" id="rSubmit">发布回复</button></div>
+            <div id="cList">${tops.map((r) => replyHTML(r, false)).join("") || '<p class="me-empty">暂无评论，来说点什么吧。</p>'}</div>
           </div>`;
         bindPosts();
       }
 
-      /* 话题操作：收藏 / 关注作者 / 私信 */
+      /* 加载收藏状态 → 同步操作栏星标 */
       async function loadTopicActions(topic) {
-        const box = $("#topicActions");
-        if (!box) return;
-        const me = window.AUTH && window.AUTH.user;
-        let fav = false, rel = null;
         try {
-          if (me) {
+          if (window.AUTH && window.AUTH.user) {
             const favs = await (await fetch("/api/me/favorites")).json();
-            fav = Array.isArray(favs) && favs.map(String).includes(String(topic.id));
-          }
-          if (me && topic.uid) {
-            rel = await (await fetch("/api/users/" + topic.uid + "/relation")).json();
+            topic._fav = Array.isArray(favs) && favs.map(String).includes(String(topic.id));
+            const fb = $("#paFav");
+            if (fb) fb.innerHTML = topic._fav ? "⭐ 已收藏" : "☆ 收藏";
           }
         } catch {}
-        box.innerHTML = `
-          <button class="btn btn-ghost btn-sm" id="btnFav">${fav ? "⭐ 已收藏" : "☆ 收藏"}</button>
-          ${me && topic.uid && topic.uid !== me.id ? `
-            <button class="btn btn-ghost btn-sm" id="btnFollow">${rel && rel.following ? "✓ 已关注 " + esc(topic.author) : "＋ 关注 " + esc(topic.author)}</button>
-            <a class="btn btn-ghost btn-sm" href="messages.html?to=${topic.uid}">✉ 私信</a>` : ""}
-          ${!me ? '<span class="topic-actions-hint">登录后可收藏、关注作者、发私信</span>' : ""}`;
-        box.querySelector("#btnFav")?.addEventListener("click", async () => {
-          if (!me) { window.openAuth("login"); return; }
-          const r = await fetch(`/api/topics/${encodeURIComponent(topic.id)}/favorite`, { method: "POST" });
-          const d = await r.json();
-          if (r.ok) { toast(d.favorited ? "已收藏，可在个人中心查看" : "已取消收藏"); loadTopicActions(topic); }
-          else toast(d.error || "操作失败");
-        });
-        box.querySelector("#btnFollow")?.addEventListener("click", async () => {
-          const r = await fetch(`/api/users/${topic.uid}/follow`, { method: "POST" });
-          const d = await r.json();
-          if (r.ok) { toast(d.following ? "已关注" : "已取消关注"); loadTopicActions(topic); }
-          else toast(d.error || "操作失败");
-        });
       }
 
       function bindPosts() {
         const me = window.AUTH && window.AUTH.user;
+
+        /* 点赞（楼主与各评论通用，key 存本地演示） */
         $$(".act-like", root).forEach((btn) => {
           btn.addEventListener("click", () => {
             const k = btn.dataset.k;
@@ -550,21 +546,56 @@
           });
         });
 
-        /* 发送回复：parentId 为空 = 顶层回复；否则挂到对应楼层下 */
-        async function sendReply(text, parentId, after) {
-          if (!me) { toast("请先登录后回复"); window.openAuth("login"); return false; }
+        /* 评论图片（最多 3 张）暂存 */
+        let cImgs = [];
+        const cStage = $("#cStage");
+        function renderCStage() {
+          cStage.hidden = !cImgs.length;
+          cStage.innerHTML = cImgs.map((u, i) => `
+            <div class="stage"><img src="${u}" alt=""><button type="button" data-rm="${i}">✕</button></div>`).join("");
+          $$("[data-rm]", cStage).forEach((b) => b.addEventListener("click", () => {
+            cImgs.splice(+b.dataset.rm, 1); renderCStage();
+          }));
+        }
+        $("#cImgBtn").addEventListener("click", () => $("#cImgInput").click());
+        $("#cImgInput").addEventListener("change", async (e) => {
+          const files = [...e.target.files];
+          e.target.value = "";
+          for (const f of files) {
+            if (cImgs.length >= 3) { toast("评论最多 3 张图片"); break; }
+            if (f.size > 3 * 1024 * 1024) { toast(`「${f.name}」超过 3MB，已跳过`); continue; }
+            await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = async () => {
+                try {
+                  const r = await fetch("/api/upload", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ data: reader.result }),
+                  });
+                  const d = await r.json();
+                  if (r.ok && cImgs.length < 3) { cImgs.push(d.url); renderCStage(); }
+                  else if (!r.ok) toast(d.error || "上传失败");
+                } catch { toast("上传失败"); }
+                resolve();
+              };
+              reader.readAsDataURL(f);
+            });
+          }
+        });
+
+        /* 发送评论：parentId 空 = 顶层；否则挂到对应评论下 */
+        async function sendReply(text, parentId, imgs) {
           try {
             const resp = await fetch("/api/topics/" + encodeURIComponent(t.id) + "/replies", {
               method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text, parentId }),
+              body: JSON.stringify({ text, parentId, images: imgs || [] }),
             });
             const data = await resp.json();
             if (!resp.ok) { toast(data.error || "发布失败"); return false; }
             window.SERVER_REPLIES[t.id] = window.SERVER_REPLIES[t.id] || [];
             window.SERVER_REPLIES[t.id].push(data.reply);
             render();
-            toast("回复已发布");
-            if (after) after();
+            toast("评论已发布");
             return true;
           } catch {
             toast("后端未启动，无法发布");
@@ -572,14 +603,38 @@
           }
         }
 
-        /* 点楼层的「回复」→ 在该楼正下方展开内联回复框；楼主的「回复」→ 聚焦底部输入框 */
+        /* 操作栏「评论」→ 聚焦评论框 */
+        $("#paComment").addEventListener("click", () => {
+          $(".cbox").scrollIntoView({ behavior: "smooth", block: "center" });
+          $("#rText").focus();
+        });
+
+        /* 操作栏「收藏」 */
+        $("#paFav").addEventListener("click", async () => {
+          if (!me) { window.openAuth("login"); return; }
+          const r = await fetch(`/api/topics/${encodeURIComponent(t.id)}/favorite`, { method: "POST" });
+          const d = await r.json();
+          if (!r.ok) { toast(d.error || "操作失败"); return; }
+          t._fav = d.favorited;
+          $("#paFav").innerHTML = t._fav ? "⭐ 已收藏" : "☆ 收藏";
+          toast(t._fav ? "已收藏，可在个人中心查看" : "已取消收藏");
+        });
+
+        /* 顶层评论发布 */
+        $("#rSubmit").addEventListener("click", async () => {
+          const text = $("#rText").value.trim();
+          if (!text && !cImgs.length) return;
+          if (!me) { toast("请先登录后评论"); window.openAuth("login"); return; }
+          $("#rSubmit").disabled = true;
+          const ok = await sendReply(text, null, cImgs);
+          if (ok) { $("#rText").value = ""; cImgs = []; renderCStage(); }
+          $("#rSubmit").disabled = false;
+        });
+
+        /* 点某条评论的「回复」→ 该评论下方展开内联输入框（楼中楼） */
         $$(".act-reply", root).forEach((btn) => {
           btn.addEventListener("click", () => {
-            if (btn.dataset.rid === "op") {
-              $(".composer").scrollIntoView({ behavior: "smooth", block: "end" });
-              $("#rText").focus();
-              return;
-            }
+            if (!me) { toast("请先登录后评论"); window.openAuth("login"); return; }
             const rid = btn.dataset.rid;
             $$(".rbox", root).forEach((b) => b.remove());
             const slot = $(`.rbox-slot[data-slot="${rid}"]`, root);
@@ -599,24 +654,15 @@
               const text = box.querySelector("textarea").value.trim();
               if (!text) return;
               e.target.disabled = true;
-              const ok = await sendReply(text, rid, () => {
-                const el = $(`.post[data-rid="${rid}"]`, root);
+              const ok = await sendReply(text, rid);
+              if (ok) {
+                box.remove();
+                const el = $(`.cmt[data-rid="${rid}"]`, root);
                 if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-              });
-              if (ok) box.remove();
+              }
               else e.target.disabled = false;
             });
           });
-        });
-
-        /* 底部输入框 = 顶层回复 */
-        $("#rSubmit").addEventListener("click", async () => {
-          const text = $("#rText").value.trim();
-          if (!text) return;
-          $("#rSubmit").disabled = true;
-          const ok = await sendReply(text, null);
-          if (ok) $("#rText").value = "";
-          $("#rSubmit").disabled = false;
         });
       }
 

@@ -540,14 +540,16 @@ app.get("/api/topics/:id/replies", (req, res) => {
 app.post("/api/topics/:id/replies", (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: "请先登录" });
-  const { text, parentId } = req.body || {};
-  if (!text || !String(text).trim()) return res.status(400).json({ error: "回复内容不能为空" });
+  const { text, parentId, images } = req.body || {};
+  const imgs = Array.isArray(images) ? images.filter((s) => /^\/uploads\//.test(s)).slice(0, 3) : [];
+  if ((!text || !String(text).trim()) && !imgs.length) return res.status(400).json({ error: "评论内容不能为空" });
   const tid = req.params.id;
   db.replies[tid] = db.replies[tid] || [];
   const reply = {
     id: "r" + store.nextId("replyId"),
     uid: user.id, nickname: user.nickname, color: user.color,
-    time: Date.now(), text: String(text).trim().slice(0, 1000), likes: 0,
+    time: Date.now(), text: String(text || "").trim().slice(0, 1000), likes: 0,
+    images: imgs,
     parentId: parentId ? String(parentId).slice(0, 40) : null,
   };
   db.replies[tid].push(reply);
