@@ -472,7 +472,33 @@ app.get("/api/me", (req, res) => {
 
 /* 用户发布的话题（与内置示例数据在前端合并展示） */
 app.get("/api/topics", (req, res) => {
-  res.json(db.topics.map((t) => ({ ...t, replies: undefined })));
+  res.json(db.topics);
+});
+/* 浏览计数：一个访客对同一帖子只 +1（登录按账号，游客按访客 Cookie） */
+app.post("/api/topics/:id/view", (req, res) => {
+  const tid = req.params.id;
+  const user = currentUser(req);
+  let key;
+  if (user) key = "u" + user.id;
+  else {
+    const c = parseCookies(req);
+    if (c.vid) key = "g" + c.vid;
+    else {
+      const vid = crypto.randomBytes(16).toString("hex");
+      key = "g" + vid;
+      setCookie(res, "vid", vid, 365 * 24 * 3600 * 1000);
+    }
+  }
+  db.viewSeen = db.viewSeen || {};
+  db.viewCounts = db.viewCounts || {};
+  db.viewSeen[key] = db.viewSeen[key] || {};
+  if (!db.viewSeen[key][tid]) {
+    db.viewSeen[key][tid] = 1;
+    db.viewCounts[tid] = (db.viewCounts[tid] || 0) + 1;
+    store.save();
+  }
+  /* 返回增量，基准浏览量由前端（静态数据/帖子数据）自带，两者相加展示 */
+  res.json({ ok: true, extra: db.viewCounts[tid] || 0 });
 });
 app.post("/api/topics", (req, res) => {
   const user = currentUser(req);

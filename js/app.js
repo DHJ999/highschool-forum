@@ -108,7 +108,8 @@
     return rs.length ? tsOf(rs[rs.length - 1].time) : tsOf(t.created);
   }
   function viewCount(t) {
-    return (t.views || 0) + ((loadStore().views || {})[t.id] || 0);
+    const extra = (window.TOPIC_EXTRA || {})[t.id] || 0;
+    return (t.views || 0) + extra;
   }
 
   /* ---------- 进入页 ---------- */
@@ -395,14 +396,18 @@
       window.SERVER_TOPICS = await (await fetch("/api/topics")).json();
       window.SERVER_REPLIES = window.SERVER_REPLIES || {};
       window.SERVER_REPLIES[qs("id")] = await (await fetch("/api/topics/" + encodeURIComponent(qs("id")) + "/replies")).json();
+      /* 浏览计数：服务端按访客去重（一人一帖只 +1），返回增量与基准相加展示 */
+      const v = await (await fetch("/api/topics/" + encodeURIComponent(qs("id")) + "/view", { method: "POST" })).json();
+      if (v && v.extra != null) {
+        window.TOPIC_EXTRA = window.TOPIC_EXTRA || {};
+        window.TOPIC_EXTRA[qs("id")] = v.extra;
+      }
     } catch {}
     const t = findTopic(qs("id"));
     if (!t) {
       root.innerHTML = `<div class="empty-list">没有找到这个话题。<br><br><a class="btn btn-primary" href="index.html">回到话题列表</a></div>`;
       renderSidebar(null, null);
     } else {
-      storeUpdate((s) => { s.views = s.views || {}; s.views[t.id] = (s.views[t.id] || 0) + 1; });
-
       renderSidebar(t.category, null);
       document.title = `${t.title} · ${DATA.site.name}`;
 
