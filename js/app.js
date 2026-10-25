@@ -234,7 +234,7 @@
     const ub = rail.querySelector("#railULike");
     if (ub) {
       const setLike = (d) => {
-        ub.innerHTML = `👍 赞一个 <b>${d.likes}</b>`;
+        ub.innerHTML = `👍 赞一个${d.likes ? ` <b>${d.likes}</b>` : ""}`;
         ub.classList.toggle("on", !!(d.liked ?? d.likedByMe));
         const lvEl = rail.querySelector("#railLvBadge");
         if (lvEl && d.lv) lvEl.textContent = `${d.lv} ${d.title}`;
