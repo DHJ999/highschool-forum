@@ -139,28 +139,16 @@
     let html = "";
     const me = window.AUTH && window.AUTH.user;
     if (me) {
-      let my = { t: 0, r: 0 };
-      try {
-        const [ts, rs] = await Promise.all([
-          fetch("/api/me/topics").then((r) => r.json()),
-          fetch("/api/me/replies").then((r) => r.json()),
-        ]);
-        if (Array.isArray(ts)) my.t = ts.length;
-        if (Array.isArray(rs)) my.r = rs.length;
-      } catch {}
       html += `
       <div class="rail-card">
         <div class="rail-user-head">
           ${avatar(me.nickname, me.color)}
           <div><b>${esc(me.nickname)}</b><span>${me.grade ? me.grade + " 级入学" : "未设置年级"}</span></div>
         </div>
-        <div class="rail-user-stats">
-          <div><b>${my.t}</b><span>话题</span></div>
-          <div><b>${my.r}</b><span>回复</span></div>
-        </div>
         <div class="rail-btns">
+          <a class="btn btn-primary" href="#" data-act="new">✏️ 发布帖子</a>
           <a class="btn btn-ghost" href="me.html">👤 个人中心</a>
-          <a class="btn btn-ghost" href="messages.html">✉ 私信</a>
+          <a class="btn btn-ghost" href="messages.html">✉ 消息</a>
           ${me.role === "admin" ? '<a class="btn btn-ghost" href="admin.html">⚙ 管理后台</a>' : ""}
         </div>
       </div>`;
@@ -187,7 +175,7 @@
         ${me && a.uid && a.uid !== me.id ? `
         <div class="rail-btns" style="margin-top:8px">
           <button class="btn btn-primary" id="railFollow" data-uid="${a.uid}">＋ 关注</button>
-          <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 私信</a>
+          <a class="btn btn-ghost" href="messages.html?to=${a.uid}">✉ 消息</a>
         </div>` : ""}
       </div>`;
     }

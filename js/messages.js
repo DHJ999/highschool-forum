@@ -67,7 +67,7 @@
             ${c.unread ? `<span class="unread">${c.unread > 9 ? "9+" : c.unread}</span>` : ""}
             <time>${relTime(c.time)}</time>
           </div>
-        </div>`).join("") : '<p class="c-empty">还没有会话。去话题页找同学「✉ 私信」吧。</p>';
+        </div>`).join("") : '<p class="c-empty">还没有会话。去话题页找同学「✉ 消息」吧。</p>';
       $$(".contact", contactsBox).forEach((el) =>
         el.addEventListener("click", () => open(+el.dataset.uid)));
     } catch {}
