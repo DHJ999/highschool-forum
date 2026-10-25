@@ -522,7 +522,7 @@ input[type="password"]::-ms-clear { display: none; }
 .auth-user { display: inline-flex; align-items: center; gap: 8px; }
 .auth-user .avatar { width: 28px; height: 28px; font-size: 13px; }
 .auth-user b { font-size: 14px; }
-button.auth-user { background: none; border: 0; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+button.auth-user { background: none; border: 0; cursor: pointer; padding: 4px 8px; border-radius: 8px; color: var(--text); }
 button.auth-user:hover { background: var(--hover); }
 
 /* ---------- 头像下拉菜单 ---------- */

@@ -240,9 +240,6 @@
     const catCount = (cid) => topics.filter((t) => t.category === cid).length;
     const tags = {};
     topics.forEach((t) => t.tags.forEach((g) => { tags[g] = (tags[g] || 0) + 1; }));
-    $("#sideTopics").innerHTML = `
-      <a class="side-item ${!activeCat && !activeTag ? "active" : ""}" href="index.html">📋 全部话题</a>
-      <a class="side-item" data-act="new">✏️ 发布帖子</a>`;
 
     /* 年级 Top5（按话题数）；当前筛选中的年级即使不在榜上也保留显示（不高亮） */
     let catList = (window.CATS || DATA.categories)
