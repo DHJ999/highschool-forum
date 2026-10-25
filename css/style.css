@@ -318,6 +318,33 @@ html[data-theme="light"] {
 .pa-item b { color: var(--text); font-weight: 600; }
 .pa-item.act-like.liked, .pa-item.act-like.liked b { color: var(--like); }
 
+/* ---------- 通知铃铛 ---------- */
+.bell-wrap { position: relative; }
+.bell-badge {
+  position: absolute; top: -1px; right: -3px;
+  background: var(--like); color: #fff; font-size: 10px; font-weight: 600;
+  min-width: 16px; height: 16px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0 4px;
+}
+.notif-dropdown {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 80; width: 330px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38); padding: 6px;
+  opacity: 0; visibility: hidden; transform: translateY(6px); transition: 0.18s;
+  max-height: 380px; overflow-y: auto;
+}
+.notif-dropdown.open { opacity: 1; visibility: visible; transform: none; }
+.notif-item {
+  display: block; padding: 10px 12px; border-radius: 8px;
+  color: var(--text); font-size: 13px; line-height: 1.5;
+}
+.notif-item:hover { background: var(--hover); }
+.notif-item.unread { font-weight: 600; }
+.notif-item .notif-text { display: flex; align-items: flex-start; gap: 8px; }
+.notif-item .avatar { width: 26px; height: 26px; font-size: 12px; flex: none; }
+.notif-item time { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.notif-empty { padding: 24px 12px; text-align: center; color: var(--muted); font-size: 13px; margin: 0; }
+
 /* ---------- 评论卡（bbs-go 风格） ---------- */
 .comments-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-top: 18px; }
 .comments-card h3 { margin: 0 0 14px; font-size: 16px; }

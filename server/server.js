@@ -256,6 +256,80 @@ app.get("/api/users/:id/relation", (req, res) => {
   });
 });
 
+/* ---------- 通知 ---------- */
+function notifyTo(toUid, fromUser, text, topicId) {
+  if (toUid === fromUser.id) return; /* 自己的操作不通知自己 */
+  db.notifications = db.notifications || [];
+  db.notifications.push({
+    id: "n" + store.nextId("replyId"),
+    to: toUid, from: fromUser.id, fromName: fromUser.nickname, fromColor: fromUser.color,
+    text, topicId, time: Date.now(), read: false,
+  });
+  /* 每人最多保留 50 条，超出删最旧 */
+  const mine = db.notifications.filter((n) => n.to === toUid);
+  if (mine.length > 50) {
+    const drop = new Set(mine.slice(0, mine.length - 50).map((n) => n.id));
+    db.notifications = db.notifications.filter((n) => !drop.has(n.id));
+  }
+}
+
+/* ---------- 点赞（服务端计数 + 按用户去重） ---------- */
+app.post("/api/topics/:id/like", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "请先登录" });
+  const tid = req.params.id;
+  const topic = db.topics.find((x) => x.id === tid);
+  if (!topic) return res.status(404).json({ error: "帖子不存在" });
+  const target = String((req.body || {}).target || "op");
+  let ownerUid = null, text = "";
+  let reply = null;
+  if (target !== "op") {
+    reply = (db.replies[tid] || []).find((x) => x.id === target);
+    if (!reply) return res.status(404).json({ error: "评论不存在" });
+    ownerUid = reply.uid;
+    text = "点赞了你的评论";
+  } else {
+    ownerUid = topic.uid;
+    text = `点赞了你的帖子《${topic.title}》`;
+  }
+  db.likes = db.likes || {};
+  db.likes[tid] = db.likes[tid] || {};
+  const set = db.likes[tid][target] = db.likes[tid][target] || [];
+  const i = set.indexOf(user.id);
+  let liked;
+  if (i >= 0) { set.splice(i, 1); liked = false; }
+  else { set.push(user.id); liked = true; }
+  if (liked && ownerUid && ownerUid !== user.id) notifyTo(ownerUid, user, text, tid);
+  store.save();
+  res.json({ ok: true, liked, count: set.length });
+});
+
+/* ---------- 通知 API ---------- */
+app.get("/api/me/notifications", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "请先登录" });
+  db.notifications = db.notifications || [];
+  const mine = db.notifications.filter((n) => n.to === user.id).sort((a, b) => b.time - a.time);
+  res.json({
+    unread: mine.filter((n) => !n.read).length,
+    list: mine.slice(0, 50).map((n) => ({
+      id: n.id, fromName: n.fromName, fromColor: n.fromColor,
+      text: n.text, time: n.time, topicId: n.topicId, read: n.read,
+    })),
+  });
+});
+app.post("/api/me/notifications/read", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "请先登录" });
+  db.notifications = db.notifications || [];
+  let changed = false;
+  for (const n of db.notifications) {
+    if (n.to === user.id && !n.read) { n.read = true; changed = true; }
+  }
+  if (changed) store.save();
+  res.json({ ok: true });
+});
+
 /* ---------- 收藏 ---------- */
 app.post("/api/topics/:id/favorite", (req, res) => {
   const me = currentUser(req);
@@ -263,10 +337,16 @@ app.post("/api/topics/:id/favorite", (req, res) => {
   db.favorites = db.favorites || {};
   const list = (db.favorites[me.id] = db.favorites[me.id] || []);
   const i = list.indexOf(req.params.id);
-  if (i >= 0) { list.splice(i, 1); store.save(); return res.json({ ok: true, favorited: false }); }
-  list.push(req.params.id);
+  let favorited;
+  if (i >= 0) { list.splice(i, 1); favorited = false; }
+  else { list.push(req.params.id); favorited = true; }
+  /* 通知：收藏了别人的帖子 */
+  const topic = db.topics.find((x) => x.id === req.params.id);
+  if (favorited && topic && topic.uid && topic.uid !== me.id) {
+    notifyTo(topic.uid, me, `收藏了你的帖子《${topic.title}》`, req.params.id);
+  }
   store.save();
-  res.json({ ok: true, favorited: true });
+  res.json({ ok: true, favorited });
 });
 app.get("/api/me/favorites", (req, res) => {
   const me = currentUser(req);
@@ -485,9 +565,14 @@ app.get("/api/me", (req, res) => {
 
 /* 用户发布的话题（与内置示例数据在前端合并展示）；附作者年级供头衔展示 */
 app.get("/api/topics", (req, res) => {
+  db.likes = db.likes || {};
   res.json(db.topics.map((t) => {
     const u = t.uid ? db.users.find((x) => x.id === t.uid) : null;
-    return { ...t, authorGrade: u ? (u.grade ?? null) : null };
+    return {
+      ...t,
+      authorGrade: u ? (u.grade ?? null) : null,
+      likeCount: (db.likes[t.id] && db.likes[t.id].op) ? db.likes[t.id].op.length : 0,
+    };
   }));
 });
 /* 浏览计数：一个访客对同一帖子只 +1（登录按账号，游客按访客 Cookie） */
@@ -545,6 +630,12 @@ app.delete("/api/topics/:id", (req, res) => {
   if (!admin && t.uid !== user.id) return res.status(403).json({ error: "只能删除自己的话题" });
   db.topics = db.topics.filter((x) => x.id !== t.id);
   delete db.replies[t.id];
+  delete db.likes[t.id];
+  if (db.favorites) {
+    for (const k of Object.keys(db.favorites)) {
+      db.favorites[k] = db.favorites[k].filter((x) => x !== t.id);
+    }
+  }
   /* 同步清理所有用户收藏中的该话题 */
   if (db.favorites) {
     for (const k of Object.keys(db.favorites)) {
@@ -561,9 +652,13 @@ app.get("/api/topics/:id/replies", (req, res) => {
     const u = db.users.find((x) => x.id === uid);
     return u ? (u.grade ?? null) : null;
   };
-  res.json((db.replies[req.params.id] || []).map((r) => ({
-    ...r, grade: r.uid ? gradeOf(r.uid) : null,
-  })));
+  res.json((db.replies[req.params.id] || []).map((r) => {
+    const lc = (db.likes || {})[req.params.id] || {};
+    return {
+      ...r, grade: r.uid ? gradeOf(r.uid) : null,
+      likeCount: lc[r.id] ? lc[r.id].length : 0,
+    };
+  }));
 });
 app.post("/api/topics/:id/replies", (req, res) => {
   const user = currentUser(req);
@@ -581,8 +676,15 @@ app.post("/api/topics/:id/replies", (req, res) => {
     parentId: parentId ? String(parentId).slice(0, 40) : null,
   };
   db.replies[tid].push(reply);
+  /* 通知：回复了别人的评论 → 通知评论作者；评论了别人的帖子 → 通知帖子作者 */
+  const topic = db.topics.find((x) => x.id === tid);
+  const parent = parentId ? (db.replies[tid] || []).find((x) => x.id === parentId) : null;
+  if (parent && parent.uid !== user.id) notifyTo(parent.uid, user, "回复了你的评论", tid);
+  if (topic && topic.uid && topic.uid !== user.id && (!parent || parent.uid !== topic.uid)) {
+    notifyTo(topic.uid, user, `评论了你的帖子《${topic.title}》`, tid);
+  }
   store.save();
-  res.json({ ok: true, reply });
+  res.json({ ok: true, reply, likeCount: 0 });
 });
 app.delete("/api/replies/:tid/:rid", (req, res) => {
   const user = currentUser(req);
@@ -713,6 +815,12 @@ app.delete("/api/admin/topics/:id", requireAdmin, (req, res) => {
   if (!t) return res.status(404).json({ error: "话题不存在" });
   db.topics = db.topics.filter((x) => x.id !== t.id);
   delete db.replies[t.id];
+  delete db.likes[t.id];
+  if (db.favorites) {
+    for (const k of Object.keys(db.favorites)) {
+      db.favorites[k] = db.favorites[k].filter((x) => x !== t.id);
+    }
+  }
   /* 同步清理所有用户收藏中的该话题 */
   if (db.favorites) {
     for (const k of Object.keys(db.favorites)) {

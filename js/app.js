@@ -432,12 +432,7 @@
       renderSidebar(t.category, null);
       document.title = `${t.title} · ${DATA.site.name}`;
 
-      const likeKey = (i) => (i < 0 ? "op" : "r" + i);
-      function likesFor(topic, i) {
-        const base = i < 0 ? topic.likes : repliesOf(topic)[i].likes;
-        const mine = (loadStore().likes || {})[topic.id] || {};
-        return base + (mine[likeKey(i)] ? 1 : 0);
-      }
+      /* 点赞计数以服务端为准（t.likeCount / r.likeCount 由接口返回） */
 
       function render() {
         const rs = repliesOf(t);
@@ -490,7 +485,7 @@
               <p class="cmt-text">${esc(r.text)}</p>
               ${replyImgs(r)}
               <div class="cmt-actions">
-                <button class="act-btn act-like" data-k="${likeKey(r._idx)}">❤ <b>${likesFor(t, r._idx)}</b></button>
+                <button class="act-btn act-like" data-target="${r.id}">❤ <b>${r.likeCount || 0}</b></button>
                 <button class="act-btn act-reply" data-rid="${r._id}" data-nick="${esc(r.user)}">💬 回复</button>
                 ${canDM ? `<a class="act-btn" href="messages.html?to=${r.uid}">✉ 私信</a>` : ""}
                 ${canDel ? `<button class="act-btn act-del" data-rid="${r._id}" title="删除（其下回复一并删除）">🗑 删除</button>` : ""}
@@ -521,7 +516,7 @@
             <div class="pc-badges">${catChip(t.category)}${tagChips(t.tags)}</div>
             <div class="pc-actions">
               <span class="pa-item" title="浏览量">👁 浏览 <b>${viewCount(t)}</b></span>
-              <button class="pa-item act-like" data-k="op">❤ 点赞 <b>${likesFor(t, -1)}</b></button>
+              <button class="pa-item act-like" data-target="op">❤ 点赞 <b>${t.likeCount || 0}</b></button>
               <button class="pa-item" id="paComment">💬 评论 <b>${rs.length}</b></button>
               <button class="pa-item" id="paFav">${t._fav ? "⭐ 已收藏" : "☆ 收藏"}</button>
             </div>
@@ -558,21 +553,24 @@
         const me = window.AUTH && window.AUTH.user;
 
         /* 点赞（楼主与各评论通用，key 存本地演示） */
+        /* 点赞：服务端 toggle（去重+通知），原位更新计数不整页重渲染 */
         $$(".act-like", root).forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const k = btn.dataset.k;
-            let on;
-            storeUpdate((s) => {
-              s.likes = s.likes || {};
-              s.likes[t.id] = s.likes[t.id] || {};
-              on = !s.likes[t.id][k];
-              if (on) s.likes[t.id][k] = true;
-              else delete s.likes[t.id][k];
-            });
-            render();
-            const el = $(`.act-like[data-k="${k}"]`, root);
-            el.classList.add("liked", "bump");
-            toast(on ? "已赞" : "已取消赞");
+          btn.addEventListener("click", async () => {
+            if (!me) { toast("请先登录后点赞"); window.openAuth("login"); return; }
+            btn.disabled = true;
+            try {
+              const resp = await fetch(`/api/topics/${encodeURIComponent(t.id)}/like`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ target: btn.dataset.target }),
+              });
+              const d = await resp.json();
+              if (!resp.ok) { toast(d.error || "操作失败"); return; }
+              btn.querySelector("b").textContent = d.count;
+              btn.classList.toggle("liked", d.liked);
+              btn.classList.add("bump");
+              toast(d.liked ? "已赞，已通知作者" : "已取消赞");
+            } catch { toast("后端未启动，无法点赞"); }
+            finally { btn.disabled = false; }
           });
         });
 
