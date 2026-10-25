@@ -589,7 +589,7 @@
               btn.querySelector("b").textContent = d.count;
               btn.classList.toggle("liked", d.liked);
               btn.classList.add("bump");
-              toast(d.liked ? "已赞，已通知作者" : "已取消赞");
+              toast(d.liked ? "已赞" : "已取消赞");
             } catch { toast("后端未启动，无法点赞"); }
             finally { btn.disabled = false; }
           });
