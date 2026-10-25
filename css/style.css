@@ -133,8 +133,6 @@ button { font-family: inherit; }
 
 /* ---------- 右侧栏卡片 ---------- */
 .rail-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
-/* 作者卡移入正文流（窄屏）时的间距 */
-#topicRoot .rail-card { margin-top: 18px; }
 .rail-card h4 { margin: 0 0 12px; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; }
 .rail-user-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .rail-user-head .avatar { width: 44px; height: 44px; font-size: 20px; }

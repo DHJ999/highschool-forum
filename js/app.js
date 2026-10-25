@@ -180,7 +180,7 @@
       const a = opt.author;
       const me = window.AUTH && window.AUTH.user;
       html += `
-      <div class="rail-card author-card">
+      <div class="rail-card">
         <h4>作者</h4>
         <div class="rail-user-head">
           ${avatar(a.author, a.color, "", a.authorAvatar)}
@@ -767,22 +767,7 @@
 
       render();
       loadTopicActions(t);
-      /* 窄屏（右栏隐藏的宽度）把作者卡移进正文流，插在主楼与评论区之间；回宽屏还原 */
-      function placeAuthorCard() {
-        const rail = $("#rail");
-        const card = document.querySelector(".author-card");
-        const root = $("#topicRoot");
-        if (!rail || !card || !root) return;
-        const narrow = matchMedia("(max-width: 1120px)").matches;
-        if (narrow && card.parentElement === rail) {
-          card._home = card.nextElementSibling;
-          root.insertBefore(card, root.querySelector(".comments-card") || null);
-        } else if (!narrow && card.parentElement !== rail) {
-          rail.insertBefore(card, card._home || null);
-        }
-      }
-      renderRail({ author: t }).then(placeAuthorCard);
-      window.addEventListener("resize", placeAuthorCard);
+      renderRail({ author: t });
     }
   })();
 })();
