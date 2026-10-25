@@ -66,6 +66,7 @@
             <a class="ud-item" href="me.html">👤 个人中心</a>
             ${u.role === "admin" ? "" : '<button class="ud-item" data-m="email">📮 更换邮箱</button>'}
             <button class="ud-item" data-m="grade">🎓 入学年级（${u.grade ? u.grade + " 级" : "未设置"}）</button>
+            <button class="ud-item" data-m="theme">◐ 深浅色（当前：${document.documentElement.dataset.theme === "light" ? "浅色" : "深色"}）</button>
             ${u.role === "admin" ? '<a class="ud-item" href="admin.html">⚙ 管理后台</a>' : ""}
             <div class="ud-sep"></div>
             <button class="ud-item ud-danger" data-m="logout">退出登录</button>
@@ -84,6 +85,26 @@
       area.querySelector('[data-m="profile"]').addEventListener("click", () => { menu.classList.remove("open"); openProfileEdit(); });
       if (u.role !== "admin") area.querySelector('[data-m="email"]').addEventListener("click", () => { menu.classList.remove("open"); openEmailChange(); });
       area.querySelector('[data-m="grade"]').addEventListener("click", () => { menu.classList.remove("open"); openGradeModal(); });
+      /* 深浅色：切换并写入账号（换设备登录后跟随账号） */
+      area.querySelector('[data-m="theme"]').addEventListener("click", async () => {
+        menu.classList.remove("open");
+        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        window.AUTH.applyTheme(next);
+        const item = area.querySelector('[data-m="theme"]');
+        if (item) item.textContent = `◐ 深浅色（当前：${next === "light" ? "浅色" : "深色"}）`;
+        try {
+          const r = await fetch("/api/me/profile", {
+            method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ theme: next }),
+          });
+          if (r.ok) window.AUTH.user = (await r.json()).user;
+        } catch {}
+        notify(next === "light" ? "已切换浅色模式" : "已切换深色模式");
+      });
+
+      /* 登录后主题在用户菜单里，隐藏顶栏的 ◐ 按钮（游客仍可用） */
+      const bt = document.getElementById("btnTheme");
+      if (bt) bt.hidden = true;
 
       /* 消息按钮角标：私信未读 + 通知未读，30 秒轮询 */
       async function refreshMsgBadge() {
@@ -383,11 +404,23 @@
     });
   }
 
+  /* ---------- 主题：应用/切换（登录后跟随账号，游客存本地） ---------- */
+  window.AUTH.applyTheme = (theme) => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      const s = JSON.parse(localStorage.getItem("sjforum.v1")) || {};
+      s.theme = theme;
+      localStorage.setItem("sjforum.v1", JSON.stringify(s));
+    } catch {}
+  };
+
   /* ---------- 初始化：获取当前登录态 ---------- */
   (async () => {
     try {
       const data = await (await fetch("/api/me")).json();
       window.AUTH.user = data.user;
+      /* 账号里存过主题 → 覆盖本地偏好 */
+      if (data.user && data.user.theme) window.AUTH.applyTheme(data.user.theme);
     } catch { /* 后端未启动：保持未登录态 */ }
     window.AUTH.__inited = true;
     renderArea();

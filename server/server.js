@@ -58,7 +58,7 @@ function isAdmin(req) {
   const u = currentUser(req);
   return !!(u && u.role === "admin");
 }
-const pubUser = (u) => ({ id: u.id, email: u.email, nickname: u.nickname, color: u.color, avatar: u.avatar || null, role: u.role, grade: u.grade ?? null, gradeChanged: !!u.gradeChanged, tags: u.tags || [], createdAt: u.createdAt });
+const pubUser = (u) => ({ id: u.id, email: u.email, nickname: u.nickname, color: u.color, avatar: u.avatar || null, role: u.role, grade: u.grade ?? null, gradeChanged: !!u.gradeChanged, tags: u.tags || [], createdAt: u.createdAt, theme: u.theme || null });
 
 /* 管理员凭据：每次启动以 config 为准重新哈希 */
 db.adminCred = { username: config.admin.username, pass: hashPw(config.admin.password) };
@@ -513,6 +513,11 @@ app.patch("/api/me/profile", (req, res) => {
   if (color !== undefined) {
     if (!PALETTE.includes(color)) return res.status(400).json({ error: "头像颜色无效" });
     user.color = color;
+  }
+  if ((req.body || {}).theme !== undefined) {
+    const t = req.body.theme;
+    if (t !== "dark" && t !== "light") return res.status(400).json({ error: "主题无效" });
+    user.theme = t;
   }
   if ((req.body || {}).avatar === null) {
     if (user.avatar && /^\/uploads\//.test(user.avatar)) {
