@@ -184,8 +184,8 @@
       <div class="rail-card">
         <h4>站点统计</h4>
         <div class="stat-grid">
-          <div><b>${DATA.topics.length + stats.topics}</b><span>话题</span></div>
-          <div><b>${stats.replies}</b><span>回复</span></div>
+          <div><b>${new Set(allTopics().flatMap((t) => t.tags)).size}</b><span>话题</span></div>
+          <div><b>${DATA.topics.length + stats.topics}</b><span>帖子</span></div>
           <div><b>${stats.users}</b><span>用户</span></div>
           <div><b>${stats.views}</b><span>访问量</span></div>
         </div>
