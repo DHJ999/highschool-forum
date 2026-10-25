@@ -1,31 +1,31 @@
 /* ============================================================
- * 风华正茂 —— 清亮蓝调主题（深色默认，可切浅色）
+ * 风华正茂 —— 主题参考 bbs-go 深浅两套（深色默认，可切浅色）
  * ============================================================ */
 :root, html[data-theme="dark"] {
-  --bg: #0e1a2a;
-  --bg2: #101f33;
-  --panel: #16263c;
-  --card: #1b2f49;
-  --hover: #223a58;
-  --border: #2b4465;
-  --text: #eaf2fb;
-  --muted: #93a9c4;
-  --accent: #38c3e6;
-  --accent-strong: #6cd6f2;
-  --accent-ink: #0a1e28;
-  --like: #ff6b6b;
+  --bg: #0d1017;
+  --bg2: #10141d;
+  --panel: #151a22;
+  --card: #1a2028;
+  --hover: #212935;
+  --border: #272f3a;
+  --text: #e9edf2;
+  --muted: #8f9aa8;
+  --accent: #3b82f6;
+  --accent-strong: #60a5fa;
+  --accent-ink: #ffffff;
+  --like: #f87171;
 }
 html[data-theme="light"] {
-  --bg: #f2f7fc;
-  --bg2: #e8f1f9;
+  --bg: #f4f6fa;
+  --bg2: #eaf0f8;
   --panel: #ffffff;
   --card: #ffffff;
-  --hover: #e9f2fa;
-  --border: #d7e4f0;
-  --text: #17253a;
-  --muted: #5c7189;
-  --accent: #0090b8;
-  --accent-strong: #00a6d2;
+  --hover: #f0f4f9;
+  --border: #e3e8ef;
+  --text: #1c2330;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-strong: #3b82f6;
   --accent-ink: #ffffff;
   --like: #e25555;
 }
