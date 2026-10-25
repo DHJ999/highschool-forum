@@ -126,9 +126,32 @@ button { font-family: inherit; }
 }
 .sidebar { position: sticky; top: 76px; align-self: start; }
 .rail { position: sticky; top: 76px; align-self: start; display: flex; flex-direction: column; gap: 16px; }
+/* 作者浮窗条（仅窄屏显示，规则在下方媒体查询里放开） */
+.author-mask { position: fixed; inset: 0; z-index: 89; background: rgba(0, 0, 0, 0.4); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+body.author-open .author-mask { opacity: 1; pointer-events: auto; }
+.author-tab {
+  display: none; position: fixed; right: 0; top: 42%; z-index: 91;
+  flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 7px; border: 0; border-radius: 10px 0 0 10px;
+  background: var(--accent); color: var(--accent-ink); cursor: pointer;
+  box-shadow: -4px 4px 14px rgba(0, 0, 0, 0.28);
+}
+.author-tab .avatar { width: 28px; height: 28px; font-size: 13px; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55); }
+.author-tab .tab-txt { writing-mode: vertical-rl; letter-spacing: 4px; font-size: 12.5px; font-weight: 600; }
 @media (max-width: 1120px) {
   .layout { grid-template-columns: 220px minmax(0, 1fr); }
-  .rail { display: none; }
+  /* 右栏不占位；仅作者卡以抽屉形式保留（其余卡片隐藏） */
+  .rail { display: contents; }
+  .rail > :not(.author-card) { display: none; }
+  .author-card {
+    position: fixed; z-index: 90; top: 96px; right: 0;
+    width: min(320px, 84vw); margin: 0;
+    transform: translateX(110%); transition: transform 0.25s;
+    border-radius: 14px 0 0 14px;
+    box-shadow: -12px 0 34px rgba(0, 0, 0, 0.35);
+  }
+  body.author-open .author-card { transform: translateX(0); }
+  .author-tab { display: inline-flex; }
 }
 
 /* ---------- 右侧栏卡片 ---------- */

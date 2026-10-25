@@ -180,7 +180,7 @@
       const a = opt.author;
       const me = window.AUTH && window.AUTH.user;
       html += `
-      <div class="rail-card">
+      <div class="rail-card author-card">
         <h4>作者</h4>
         <div class="rail-user-head">
           ${avatar(a.author, a.color, "", a.authorAvatar)}
@@ -230,6 +230,28 @@
         }
       } catch {}
     }
+    /* 作者浮窗（窄屏）：右缘小条点开抽屉，点空白处收回 */
+    if (opt.author) {
+      const a = opt.author;
+      let tab = document.getElementById("authorTab");
+      if (!tab) {
+        tab = document.createElement("button");
+        tab.id = "authorTab";
+        tab.className = "author-tab";
+        tab.innerHTML = `<span class="avatar" style="--c:${a.color}">${a.authorAvatar ? `<img src="${esc(a.authorAvatar)}" alt="">` : esc(a.author[0])}</span><span class="tab-txt">作者</span>`;
+        document.body.appendChild(tab);
+      }
+      tab.onclick = () => document.body.classList.toggle("author-open");
+      let mask = document.getElementById("authorMask");
+      if (!mask) {
+        mask = document.createElement("div");
+        mask.id = "authorMask";
+        mask.className = "author-mask";
+        document.body.appendChild(mask);
+      }
+      mask.onclick = () => document.body.classList.remove("author-open");
+    }
+
     /* 作者卡「赞一个」：读取获赞状态，点击切换（每人一票，可取消；每天收到上限 10 个） */
     const ub = rail.querySelector("#railULike");
     if (ub) {
