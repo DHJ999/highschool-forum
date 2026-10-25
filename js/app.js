@@ -118,6 +118,15 @@
     const base = t.likeCount ?? t.likes ?? 0;
     return base + repliesOf(t).reduce((n, r) => n + (r.likeCount || 0), 0);
   }
+  /* 列表接口自带的评论数据/浏览数灌进同一数据通道，保证广场与帖子详情页数字一致 */
+  window.ingestServerTopics = (list) => {
+    window.SERVER_REPLIES = window.SERVER_REPLIES || {};
+    window.TOPIC_EXTRA = window.TOPIC_EXTRA || {};
+    (list || []).forEach((t) => {
+      if (t.repliesData && t.repliesData.length) window.SERVER_REPLIES[t.id] = t.repliesData;
+      if (t.viewCount) window.TOPIC_EXTRA[t.id] = t.viewCount;
+    });
+  };
 
   /* ---------- 进入页 ---------- */
   const enter = $("#enter");
@@ -313,7 +322,10 @@
   /* ============ 列表页 ============ */
   if (page === "index") (async () => {
     await loadCats();
-    try { window.SERVER_TOPICS = await (await fetch("/api/topics")).json(); } catch {}
+    try {
+      window.SERVER_TOPICS = await (await fetch("/api/topics")).json();
+      window.ingestServerTopics(window.SERVER_TOPICS);
+    } catch {}
     let sort = qs("sort") || "latest";
     let fCat = +qs("cat") || null;
     let fTag = qs("tag") || null;
@@ -441,6 +453,7 @@
     await loadCats();
     try {
       window.SERVER_TOPICS = await (await fetch("/api/topics")).json();
+      window.ingestServerTopics(window.SERVER_TOPICS);
       window.SERVER_REPLIES = window.SERVER_REPLIES || {};
       window.SERVER_REPLIES[qs("id")] = await (await fetch("/api/topics/" + encodeURIComponent(qs("id")) + "/replies")).json();
       /* 浏览计数：服务端按访客去重（一人一帖只 +1），返回增量与基准相加展示 */

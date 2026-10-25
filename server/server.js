@@ -615,9 +615,23 @@ app.get("/api/me", (req, res) => {
 
 /* ================= 话题 / 回复 API ================= */
 
+/* 某话题的回复列表（附评论人头像/年级/点赞数）——列表与详情两个接口共用，保证数字同源 */
+const repliesOfId = (tid) => {
+  const gradeOf = (uid) => {
+    const u = db.users.find((x) => x.id === uid);
+    return u ? (u.grade ?? null) : null;
+  };
+  const lc = (db.likes || {})[tid] || {};
+  return (db.replies[tid] || []).map((r) => {
+    const ru = r.uid ? db.users.find((x) => x.id === r.uid) : null;
+    return { ...r, avatar: ru ? (ru.avatar || null) : null, grade: r.uid ? gradeOf(r.uid) : null, likeCount: lc[r.id] ? lc[r.id].length : 0 };
+  });
+};
+
 /* 用户发布的话题（与内置示例数据在前端合并展示）；附作者年级供头衔展示 */
 app.get("/api/topics", (req, res) => {
   db.likes = db.likes || {};
+  db.viewCounts = db.viewCounts || {};
   res.json(db.topics.map((t) => {
     const u = t.uid ? db.users.find((x) => x.id === t.uid) : null;
     return {
@@ -625,6 +639,8 @@ app.get("/api/topics", (req, res) => {
       authorGrade: u ? (u.grade ?? null) : null,
       authorAvatar: u ? (u.avatar || null) : null,
       likeCount: (db.likes[t.id] && db.likes[t.id].op) ? db.likes[t.id].op.length : 0,
+      viewCount: db.viewCounts[t.id] || 0,
+      repliesData: repliesOfId(t.id),
     };
   }));
 });
@@ -701,18 +717,7 @@ app.delete("/api/topics/:id", (req, res) => {
 
 /* 回复（全部走服务端；内置话题的示例回复在前端合并展示）；附评论人年级供头衔展示 */
 app.get("/api/topics/:id/replies", (req, res) => {
-  const gradeOf = (uid) => {
-    const u = db.users.find((x) => x.id === uid);
-    return u ? (u.grade ?? null) : null;
-  };
-  res.json((db.replies[req.params.id] || []).map((r) => {
-    const lc = (db.likes || {})[req.params.id] || {};
-    const ru = r.uid ? db.users.find((x) => x.id === r.uid) : null;
-    return {
-      ...r, avatar: ru ? (ru.avatar || null) : null, grade: r.uid ? gradeOf(r.uid) : null,
-      likeCount: lc[r.id] ? lc[r.id].length : 0,
-    };
-  }));
+  res.json(repliesOfId(req.params.id));
 });
 app.post("/api/topics/:id/replies", (req, res) => {
   const user = currentUser(req);
