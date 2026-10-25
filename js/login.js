@@ -83,12 +83,20 @@
   $("#lnkForgot").addEventListener("click", () => setMode("reset"));
   $("#lnkBack").addEventListener("click", () => setMode("login"));
 
-  /* ---------- 发送验证码（60 秒冷却） ---------- */
+  /* ---------- 发送验证码（注册模式需上方全部必填项填完才可发送；60 秒冷却） ---------- */
   let cooldown = 0;
   $("#btnSendCode").addEventListener("click", async () => {
     if (cooldown > 0) return;
     const email = $("#aEmail").value.trim();
     if (!email) { err("请先填写邮箱"); return; }
+    if (mode === "register") {
+      /* 注册：邮箱/密码/确认密码/昵称/入学年级 都填好才能发验证码 */
+      const pw = $("#aPass").value;
+      if (pw.length < 6) { err("请先设置密码（至少 6 位）"); return; }
+      if (pw !== $("#aPass2").value) { err("两次输入的密码不一致"); return; }
+      if (!$("#aNick").value.trim()) { err("请先填写昵称"); return; }
+      if (!$("#aGrade").value) { err("请先选择入学年级"); return; }
+    }
     const btn = $("#btnSendCode");
     btn.disabled = true;
     try {

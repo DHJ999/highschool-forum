@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>账号登录 · 风华正茂</title>
-<link rel="stylesheet" href="css/style.css?v=53">
+<link rel="stylesheet" href="css/style.css?v=54">
 </head>
 <body data-page="login">
 
@@ -25,16 +25,6 @@
       <form id="authForm">
         <div class="field"><label id="aEmailLabel">邮箱</label>
           <input id="aEmail" type="text" required placeholder="请输入邮箱"></div>
-        <div class="field code-field" hidden><label>验证码</label>
-          <div class="code-row">
-            <input id="aCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
-            <button type="button" class="btn btn-ghost" id="btnSendCode">发送验证码</button>
-          </div>
-        </div>
-        <div class="field reg-only" hidden><label>昵称</label>
-          <input id="aNick" maxlength="12" placeholder="2~12 个字，将公开展示"></div>
-        <div class="field reg-only" hidden><label>入学年级</label>
-          <select id="aGrade"><option value="">请选择入学年级</option></select></div>
         <div class="field"><label id="aPassLabel">密码</label>
           <div class="pw-wrap">
             <input id="aPass" type="password" required minlength="6" placeholder="请输入密码（至少 6 位）">
@@ -45,6 +35,16 @@
             <input id="aPass2" type="password" required minlength="6" placeholder="再输入一次密码">
             <button type="button" class="pw-eye" data-for="aPass2" aria-label="显示密码">👁</button>
           </div></div>
+        <div class="field reg-only" hidden><label>昵称</label>
+          <input id="aNick" maxlength="12" placeholder="2~12 个字，将公开展示"></div>
+        <div class="field reg-only" hidden><label>入学年级</label>
+          <select id="aGrade"><option value="">请选择入学年级</option></select></div>
+        <div class="field code-field" hidden><label>验证码</label>
+          <div class="code-row">
+            <input id="aCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
+            <button type="button" class="btn btn-ghost" id="btnSendCode">发送验证码</button>
+          </div>
+        </div>
         <p class="auth-err" id="authErr"></p>
         <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">登录</button>
       </form>
@@ -57,7 +57,7 @@
   </div>
 </div>
 
-<script src="js/data.js?v=53"></script>
-<script src="js/login.js?v=53"></script>
+<script src="js/data.js?v=54"></script>
+<script src="js/login.js?v=54"></script>
 </body>
 </html>
