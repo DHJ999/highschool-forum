@@ -525,8 +525,9 @@
                   <b>${esc(r.user)}</b>
                   ${isOp ? '<span class="p-op-badge">楼主</span>' : ""}
                   ${lvBadge(r)}
+                  ${gradeBadge(grade)}
                 </span>
-                <span class="cmt-meta">${gradeBadge(grade)}<time>${fmtTime(r.time)}</time></span>
+                <span class="cmt-meta"><time>${fmtTime(r.time)}</time></span>
               </div>
               <p class="cmt-text">${esc(r.text)}</p>
               ${replyImgs(r)}
