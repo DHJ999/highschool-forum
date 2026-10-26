@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>更换邮箱 · 风华正茂</title>
+<link rel="stylesheet" href="css/style.css?v=120">
+</head>
+<body data-page="email">
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><b>风华正茂</b><span>更换邮箱</span></a>
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="index.html">← 返回</a>
+      <span id="authArea" style="display:flex;gap:10px;align-items:center"></span>
+      <button class="icon-btn" id="btnTheme" title="切换深浅色">◐</button>
+    </div>
+  </div>
+</header>
+
+<div class="auth-wrap">
+  <p class="email-loading" id="emailLoading">正在读取账号…</p>
+  <div class="auth-card" id="emailCard" hidden>
+    <div class="auth-head"><h2>📮 更换邮箱</h2></div>
+    <div class="auth-body email-body">
+      <div id="emailFormWrap" hidden>
+        <p class="email-current">当前邮箱：<b id="emailCurrent"></b></p>
+        <form id="emailForm">
+          <div class="field"><label for="emNew">新邮箱</label>
+            <input id="emNew" type="email" required placeholder="请输入新邮箱"></div>
+          <div class="field"><label for="emCode">验证码（发送到新邮箱）</label>
+            <div class="code-row">
+              <input id="emCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
+              <button type="button" class="btn btn-ghost" id="emSend">发送验证码</button>
+            </div>
+          </div>
+          <p class="email-tip">验证码 5 分钟内有效，请同时检查垃圾邮件箱。</p>
+          <p class="email-ok" id="emailOk" hidden>验证码已发送到新邮箱。</p>
+          <p class="auth-err" id="emailErr"></p>
+          <button type="submit" class="btn btn-primary auth-submit" id="emSubmit">确认更换</button>
+        </form>
+      </div>
+      <p class="email-admin-note" id="emailAdminNote" hidden>管理员账号不支持自助更换邮箱。</p>
+      <div class="email-done" id="emailDone" hidden>
+        <p class="email-done-msg">邮箱已更换为<br><b id="emailDoneAddr"></b></p>
+        <p class="email-done-tip">下次登录请使用新邮箱。</p>
+        <div class="email-done-actions">
+          <a class="btn btn-primary" href="me.html">返回个人中心</a>
+          <a class="btn btn-ghost" href="index.html">返回首页</a>
+        </div>
+      </div>
+      <div class="auth-links" id="emailBackLinks"><p><a href="me.html">← 返回个人中心</a></p></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js?v=120"></script>
+<script src="js/email.js?v=120"></script>
+</body>
+</html>

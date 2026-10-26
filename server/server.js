@@ -9,7 +9,59 @@ const fs = require("fs");
 const store = require("./store");
 const { createMailer } = require("./mailer");
 
-const config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf8"));
+/* ---------- 配置加载：config.json（本地，已 gitignore）→ 环境变量覆盖 ---------- */
+function loadConfig() {
+  const file = path.join(__dirname, "config.json");
+  const example = path.join(__dirname, "config.example.json");
+  let base = {};
+
+  if (fs.existsSync(file)) {
+    try {
+      base = JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch (e) {
+      console.error("[配置] server/config.json 解析失败：", e.message);
+      process.exit(1);
+    }
+  } else if (fs.existsSync(example)) {
+    console.warn(
+      "[配置] 未找到 server/config.json，已从 config.example.json 载入占位配置。\n" +
+      "        请复制为 server/config.json 并填写你自己的 SMTP 授权码与管理员密码。"
+    );
+    base = JSON.parse(fs.readFileSync(example, "utf8"));
+  } else {
+    console.error("[配置] 缺少 server/config.json，且没有 config.example.json 可作模板。");
+    process.exit(1);
+  }
+
+  const env = process.env;
+  const cfg = {
+    port: Number(env.PORT) || base.port || 8123,
+    devLogCodes: base.devLogCodes,
+    smtp: {
+      host: env.SMTP_HOST || (base.smtp && base.smtp.host) || "smtp.qq.com",
+      port: Number(env.SMTP_PORT) || (base.smtp && base.smtp.port) || 465,
+      user: env.SMTP_USER || (base.smtp && base.smtp.user) || "",
+      pass: env.SMTP_PASS || (base.smtp && base.smtp.pass) || "",
+      fromName: env.SMTP_FROM_NAME || (base.smtp && base.smtp.fromName) || "风华正茂",
+    },
+    admin: {
+      username: env.ADMIN_USERNAME || (base.admin && base.admin.username) || "",
+      password: env.ADMIN_PASSWORD || (base.admin && base.admin.password) || "",
+    },
+  };
+
+  const PLACEHOLDERS = ["YOUR_SMTP_AUTH_CODE", "CHANGE_ME_BEFORE_START"];
+  if (PLACEHOLDERS.indexOf(cfg.smtp.pass) >= 0 || PLACEHOLDERS.indexOf(cfg.admin.password) >= 0) {
+    console.warn("[配置] 检测到未替换的占位符：请修改 server/config.json 或设置对应环境变量后再正式部署。");
+  }
+  if (!cfg.admin.username || !cfg.admin.password) {
+    console.error("[配置] 管理员用户名/密码为空，无法启动。");
+    process.exit(1);
+  }
+  return cfg;
+}
+
+const config = loadConfig();
 const db = store.get();
 
 /* ---------- 工具 ---------- */

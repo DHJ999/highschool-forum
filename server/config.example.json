@@ -1,0 +1,15 @@
+{
+  "port": 8123,
+  "smtp": {
+    "host": "smtp.qq.com",
+    "port": 465,
+    "user": "your-email@example.com",
+    "pass": "YOUR_SMTP_AUTH_CODE",
+    "fromName": "风华正茂"
+  },
+  "admin": {
+    "username": "admin@example.com",
+    "password": "CHANGE_ME_BEFORE_START"
+  },
+  "devLogCodes": true
+}

@@ -3,11 +3,60 @@
 按年级组织的高中同学社区：发帖（图文）、#话题、楼中楼评论、私信、收藏、点赞与获赞头衔。
 界面借鉴 [Discourse](https://www.discourse.org/) 的三栏结构与 [bbs-go](https://github.com/mlogclub/bbs-go)（GPL-3.0）的卡片与配色风格，代码全部自研；进入页「当时只道是寻常」。
 
+## 首次配置（必须先做这一步）
+
+本仓库**不包含任何真实凭据**。`server/config.json` 已被 `.gitignore` 排除，仓库里只有模板 `server/config.example.json`。
+
+### 1. 生成你的本地配置
+
+```bash
+cp server/config.example.json server/config.json
+```
+
+### 2. 填写凭据
+
+编辑 `server/config.json`：
+
+| 字段 | 说明 |
+|---|---|
+| `smtp.user` | 你的发件邮箱，例如 `yourname@qq.com` |
+| `smtp.pass` | QQ 邮箱的 **SMTP 授权码**（不是 QQ 登录密码） |
+| `admin.username` | 管理员登录账号（任意邮箱格式即可） |
+| `admin.password` | 管理员登录密码，请设为强密码 |
+
+### 3. 如何获取 QQ 邮箱 SMTP 授权码
+
+1. 登录 [QQ 邮箱](https://mail.qq.com) → 顶部「设置」→「账号」
+2. 找到「POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV 服务」
+3. 开启 **「IMAP/SMTP 服务」**（需短信验证）
+4. 点击「生成授权码」，短信验证后得到一串 16 位字母
+5. 把这串字母填入 `smtp.pass`
+
+> ⚠️ 授权码等同于邮箱的发信权限，**泄露后请立即在邮箱设置中删除并重新生成**。
+
+### 4. 用环境变量覆盖（可选，适合 Docker / 服务器部署）
+
+配置文件中的值都可以被环境变量覆盖，优先级更高：
+
+```bash
+PORT=8123 \
+SMTP_USER=yourname@qq.com \
+SMTP_PASS=your_auth_code \
+ADMIN_USERNAME=admin@example.com \
+ADMIN_PASSWORD=your_strong_password \
+node server/server.js
+```
+
+支持的环境变量：`PORT`、`SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM_NAME`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`。
+
+> 若只设置了环境变量、没有 `server/config.json`，程序会自动回退到 `config.example.json` 并提示你补全。
+
 ## 快速启动
 
 ```bash
-npm install          # 首次
-node server/server.js   # 或 npm start，默认端口 8123
+npm install                                        # 首次
+cp server/config.example.json server/config.json   # 首次配置（见上节）
+node server/server.js                             # 或 npm start，默认端口 8123
 ```
 
 访问 <http://127.0.0.1:8123>（静态页面双击打开仅可浏览，登录/发帖等需后端运行）。
