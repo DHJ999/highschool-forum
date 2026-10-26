@@ -80,6 +80,8 @@ cp server/config.example.json server/config.json
 | `smtp.pass` | **SMTP 授权码**（不是邮箱登录密码） |
 | `admin.username` | 管理员登录账号（任意邮箱格式） |
 | `admin.password` | 管理员密码，请设为强密码 |
+| `devLogCodes` | 是否把验证码打到控制台（默认 `false`，仅本地调试用；`NODE_ENV=production` 时强制关闭） |
+| `secureCookie` | 是否给会话 Cookie 加 `Secure` 标记（默认 `false`；**公网 HTTPS 部署务必设为 `true`**） |
 
 ### 3. 获取 QQ 邮箱 SMTP 授权码
 
@@ -107,6 +109,50 @@ npm start
 支持：`PORT`、`SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM_NAME`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`。
 
 > 若只有环境变量、没有 `server/config.json`，程序会自动回退到 `config.example.json` 并提示补全。
+
+## 安全加固
+
+本项目默认面向「小规模私密校友社区」，但仍内置了以下防护：
+
+| | 防护 | 说明 |
+|---|---|---|
+| 🛡️ | **登录防爆破** | 按「客户端 IP + 账号」双维度计数，5 分钟内失败 5 次即锁定；**密码正确时立即放行并清零**，不会误伤正常用户 |
+| 🛡️ | **Origin 校验防 CSRF** | 所有写操作（POST/PUT/PATCH/DELETE）校验 `Origin` 与 `Host` 同源，跨站请求返回 403；非浏览器客户端（无 Origin）放行 |
+| 🛡️ | **图片魔数校验** | 上传时嗅探 PNG/JPEG/GIF/WEBP 文件头签名，拒绝伪装成图片的 HTML/脚本，防止存储型 XSS |
+| 🛡️ | **密码哈希** | scrypt + 随机盐，`salt:hash` 格式存储；管理员密码哈希**只留在内存**，不写入 `db.json` |
+| 🛡️ | **会话安全** | HttpOnly + SameSite=Lax Cookie，剩余有效期不足 3 天时自动续期至 7 天 |
+| 🛡️ | **请求体限制** | JSON body 上限 8 MB，图片 data URL 上限 3 MB |
+| 🛡️ | **优雅退出** | 收到 SIGINT/SIGTERM 后停止收新连接、落盘数据库再退出；未捕获异常会记录并退出而非静默崩溃 |
+
+> 🔐 部署到公网时请同时设置 `SECURE_COOKIE=true`（或 `config.json` 的 `secureCookie`），并在反向代理层启用 HTTPS。
+
+## 健康检查
+
+```bash
+curl http://127.0.0.1:8123/api/health
+# {"ok":true,...}
+```
+
+可用于负载均衡探活与部署后自检。
+
+## 测试
+
+仓库自带两套零依赖的冒烟测试（Node 18+ 内置 `fetch`，无需安装额外包）：
+
+```bash
+# 1. 准备测试数据（写入 db.json，必须在启动服务前执行）
+node test/smoke.prepare.js
+
+# 2. 另开终端启动服务
+PORT=8321 npm start
+
+# 3. 跑测试
+node test/smoke.test.js   # 21 项：安全与接口基线
+node test/smoke.flow.js    # 49 项：注册→发帖→评论→点赞→私信→收藏→通知→管理 全流程
+```
+
+> ⚠️ 测试会读写 `server/data/db.json`，请勿在生产数据上运行。
+> 管理员凭据默认从 `server/config.json` 读取，也可用环境变量 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 覆盖。
 
 ## 页面一览
 
@@ -155,9 +201,13 @@ highschool-forum/
 ├── server/
 │   ├── server.js                    Express 后端（API + 静态托管 + 访问统计）
 │   ├── mailer.js                    SMTP 发送验证码
-│   ├── store.js                     JSON 文件数据库（原子写入）
+│   ├── store.js                     JSON 文件数据库（原子写入 + 防抖落盘）
 │   ├── config.example.json          配置模板
 │   └── data/                        db.json + uploads/（git 忽略）
+├── test/
+│   ├── smoke.prepare.js             生成测试用户（写盘，须在启动服务前执行）
+│   ├── smoke.test.js                安全与接口基线冒烟测试（21 项）
+│   └── smoke.flow.js                全业务流程回归测试（49 项）
 └── assets/*.svg                     手绘风插画
 ```
 
@@ -165,8 +215,9 @@ highschool-forum/
 
 - **前端**：原生 JavaScript（IIFE）+ 手写 CSS，零构建、零框架
 - **后端**：Node.js + Express 4
-- **存储**：JSON 文件（原子写入），图片存本地 `uploads/`
+- **存储**：JSON 文件（原子写入 + 防抖落盘），图片存本地 `uploads/`
 - **认证**：scrypt 密码哈希 + HttpOnly Cookie 会话 + 邮箱验证码
+- **测试**：零依赖冒烟测试（Node 内置 `fetch`），覆盖 70 项断言
 
 > 设计取向：**能用最简单的方式跑起来**。无打包、无数据库依赖，clone 即用。
 
@@ -181,6 +232,7 @@ highschool-forum/
 - **改端口 / 授权码 / 管理员密码**：只改 `server/config.json`，重启生效
 - **静态资源缓存**：HTML 引用带 `?v=N`，改动 JS/CSS 后需同步升版本号
 - **回滚**：`git log` 找基线后 `git checkout <hash> -- .`
+- **部署到公网**：务必开启 HTTPS，并设置 `secureCookie: true`
 
 ## 后续路线
 

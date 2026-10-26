@@ -36,7 +36,12 @@ function loadConfig() {
   const env = process.env;
   const cfg = {
     port: Number(env.PORT) || base.port || 8123,
-    devLogCodes: base.devLogCodes,
+    /* 生产环境（NODE_ENV=production）强制关闭验证码日志，忽略配置里的 true */
+    devLogCodes: env.NODE_ENV === "production" ? false : (base.devLogCodes === true),
+    /* HTTPS 部署时置 true（config.json 里可配），cookie 加 Secure */
+    secureCookie: env.SECURE_COOKIE !== undefined
+      ? env.SECURE_COOKIE === "true" || env.SECURE_COOKIE === "1"
+      : base.secureCookie === true,
     smtp: {
       host: env.SMTP_HOST || (base.smtp && base.smtp.host) || "smtp.qq.com",
       port: Number(env.SMTP_PORT) || (base.smtp && base.smtp.port) || 465,
@@ -77,9 +82,88 @@ function verifyPw(pw, stored) {
   } catch { return false; }
 }
 const token = () => crypto.randomBytes(32).toString("hex");
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 const CODE_TTL = 5 * 60 * 1000;
 const SESSION_TTL = 7 * 24 * 3600 * 1000;
+/* 会话剩余不足 3 天时自动续期，避免活跃用户被硬性踢下线 */
+const SESSION_RENEW_THRESHOLD = 3 * 24 * 3600 * 1000;
+
+/* ---------- 登录防爆破 ---------- */
+/* 按「客户端 IP + 账号」双维度计数：5 次失败后锁 5 分钟。
+   内存态存储，进程重启即清空（可接受的取舍：攻击者也无法靠重启绕过账号维度）。 */
+const LOGIN_FAIL_MAX = 5;
+const LOGIN_FAIL_TTL = 5 * 60 * 1000;
+const loginFails = new Map(); // key -> { count, first, until }
+function failKey(req, account) {
+  const ip = (req.headers["cf-connecting-ip"] || req.socket.remoteAddress || "unknown").toString();
+  return ip + "|" + String(account || "").toLowerCase();
+}
+function loginBlocked(req, account) {
+  const rec = loginFails.get(failKey(req, account));
+  if (!rec) return false;
+  if (rec.until && rec.until > Date.now()) return true;
+  /* 窗口过期（首次失败超过 TTL）→ 清零重新计数 */
+  if (rec.first && Date.now() - rec.first > LOGIN_FAIL_TTL) loginFails.delete(failKey(req, account));
+  return false;
+}
+function recordLoginFail(req, account) {
+  const k = failKey(req, account);
+  const rec = loginFails.get(k);
+  const now = Date.now();
+  if (!rec || (rec.first && now - rec.first > LOGIN_FAIL_TTL)) {
+    loginFails.set(k, { count: 1, first: now, until: 0 });
+    return 1;
+  }
+  rec.count++;
+  if (rec.count >= LOGIN_FAIL_MAX) rec.until = now + LOGIN_FAIL_TTL;
+  return rec.count;
+}
+function clearLoginFail(req, account) {
+  loginFails.delete(failKey(req, account));
+}
+/* 惰性清理过期记录，避免 Map 无限增长 */
+function sweepLoginFails() {
+  const now = Date.now();
+  for (const [k, rec] of loginFails) {
+    if ((rec.until && rec.until < now) || (rec.first && now - rec.first > LOGIN_FAIL_TTL)) loginFails.delete(k);
+  }
+}
+setInterval(sweepLoginFails, 60 * 1000).unref?.();
+
+function clientIp(req) {
+  return (req.headers["cf-connecting-ip"] || req.socket.remoteAddress || "unknown").toString();
+}
+
+/* ---------- 图片魔数校验 ---------- */
+/* 只信客户端声明的 MIME 是不够的：攻击者可以声明 image/png 却上传 HTML/SVG，
+   落盘后经 /uploads/ 静态服务下发即构成存储型 XSS。
+   这里按文件头（magic bytes）判定真实类型，与声明不一致一律拒绝。 */
+const IMAGE_SNIFF = [
+  { ext: "png", mime: "image/png", test: (b) => b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a },
+  { ext: "jpg", mime: "image/jpeg", test: (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  { ext: "gif", mime: "image/gif", test: (b) => b.length > 6 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61 },
+  { ext: "webp", mime: "image/webp", test: (b) => b.length > 12 && b.slice(0, 4).toString("ascii") === "RIFF" && b.slice(8, 12).toString("ascii") === "WEBP" },
+];
+/* 返回真实图片类型；不是合法图片则返回 null */
+function sniffImage(buf) {
+  for (const t of IMAGE_SNIFF) if (t.test(buf)) return t;
+  return null;
+}
+/* 解析 data URL 并校验：返回 {buf, ext} 或 null */
+function parseImageDataUrl(dataUrl) {
+  const m = /^data:image\/(png|jpe?g|gif|webp);base64,([A-Za-z0-9+/=\s]+)$/.exec(String(dataUrl || ""));
+  if (!m) return null;
+  let buf;
+  try { buf = Buffer.from(m[2].replace(/\s/g, ""), "base64"); } catch { return null; }
+  if (!buf.length || buf.length > 3 * 1024 * 1024) return null;
+  const real = sniffImage(buf);
+  if (!real) return null;
+  /* 声明类型与真实类型必须一致（jpeg/jpg 视为同一族） */
+  const declared = m[1].toLowerCase();
+  const declaredExt = declared === "jpeg" ? "jpg" : declared;
+  if (declaredExt !== real.ext) return null;
+  return { buf, ext: real.ext };
+}
 
 function parseCookies(req) {
   const out = {};
@@ -90,14 +174,27 @@ function parseCookies(req) {
   return out;
 }
 function setCookie(res, name, value, maxAge) {
-  res.setHeader("Set-Cookie",
-    `${name}=${value}; HttpOnly; Path=/; Max-Age=${Math.floor(maxAge / 1000)}; SameSite=Lax`);
+  /* secureCookie 由 config 决定：HTTPS 部署时必须开，否则 session cookie 会在明文链路上传输 */
+  const parts = [
+    `${name}=${value}`,
+    "HttpOnly",
+    "Path=/",
+    `Max-Age=${Math.floor(maxAge / 1000)}`,
+    "SameSite=Lax",
+  ];
+  if (config.secureCookie) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
 }
 function currentUser(req) {
   const sid = parseCookies(req).sid;
   if (!sid) return null;
   const s = db.sessions[sid];
   if (!s || s.expires < Date.now()) { delete db.sessions[sid]; return null; }
+  /* 滑动续期：剩余不足 3 天时自动延到 7 天后 */
+  if (s.expires - Date.now() < SESSION_RENEW_THRESHOLD) {
+    s.expires = Date.now() + SESSION_TTL;
+    store.save();
+  }
   return db.users.find((u) => u.id === s.uid) || null;
 }
 function isAdmin(req) {
@@ -112,8 +209,9 @@ function isAdmin(req) {
 }
 const pubUser = (u) => ({ id: u.id, email: u.email, nickname: u.nickname, color: u.color, avatar: u.avatar || null, role: u.role, grade: u.grade ?? null, gradeChanged: !!u.gradeChanged, tags: u.tags || [], createdAt: u.createdAt, theme: u.theme || null });
 
-/* 管理员凭据：每次启动以 config 为准重新哈希 */
-db.adminCred = { username: config.admin.username, pass: hashPw(config.admin.password) };
+/* 管理员凭据：每次启动以 config 为准重新哈希。
+   哈希只保留在内存里（不写回 db.json），避免配置文件/备份泄露时哈希一并外流。 */
+const adminCred = { username: config.admin.username, pass: hashPw(config.admin.password) };
 
 /* 管理员同时播种为普通用户账号（邮箱登录，role=admin），凭据同样以 config 为准 */
 {
@@ -144,15 +242,49 @@ const codeLog = new Map(); // 邮箱 -> 上次发送时间（60s 限流）
 const app = express();
 app.use(express.json({ limit: "12mb" }));
 
+/* ---------- Origin 校验（防 CSRF 补充层） ---------- */
+/* Cookie 已是 SameSite=Lax，能挡掉绝大多数跨站写操作；
+   这里再对「带副作用的写操作」校验 Origin/Referer 同源，双保险。
+   非浏览器客户端（curl / 服务端调用）没有 Origin 头，放行。 */
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+app.use((req, res, next) => {
+  if (!WRITE_METHODS.has(req.method)) return next();
+  if (req.path.startsWith("/api/auth/send-code")) return next(); /* 发送验证码不依赖登录态 */
+  const origin = req.headers.origin;
+  if (!origin) return next();
+  let originHost;
+  try { originHost = new URL(origin).host; } catch { return res.status(403).json({ error: "请求来源不合法" }); }
+  const selfHost = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!selfHost || originHost !== selfHost) {
+    return res.status(403).json({ error: "跨站请求被拒绝" });
+  }
+  next();
+});
+
 /* ---------- 访问量统计（只计页面浏览，不记 API 与静态资源） ---------- */
 db.stats = db.stats || { total: 0, daily: {}, pages: {} };
 store.save();
+
+/* ---------- 请求日志 ---------- */
+/* 只记 API 请求（静态资源刷屏没意义），格式：方法 路径 状态 耗时ms */
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api")) return next();
+  const t0 = Date.now();
+  res.on("finish", () => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - t0}ms`);
+  });
+  next();
+});
 app.use((req, res, next) => {
   const ext = path.extname(req.path);
   if (req.method === "GET" && !req.path.startsWith("/api") && (!ext || ext === ".html")) {
     const day = new Date().toISOString().slice(0, 10);
-    const p = req.path === "/" || req.path === "/index.html" ? "首页"
-      : decodeURIComponent(req.path).replace(/^\//, "").replace(/\.html$/, "");
+    /* 页面名归一化：去掉前导 / 与 .html 后缀，并做 path.normalize 防止
+       构造出含 ../ 之类的畸形 key 落进统计表 */
+    let p = decodeURIComponent(req.path);
+    try { p = path.posix.normalize(p); } catch {}
+    p = p.replace(/^\/+/, "").replace(/\.html$/, "");
+    if (p === "" || p === "index") p = "首页";
     db.stats.total++;
     db.stats.daily[day] = (db.stats.daily[day] || 0) + 1;
     db.stats.pages[p] = (db.stats.pages[p] || 0) + 1;
@@ -160,7 +292,27 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(path.join(__dirname, "..")));
+/* 静态资源：HTML 不缓存（保证更新即时生效），js/css/图片长缓存（带版本号 ?v=N） */
+app.use(express.static(path.join(__dirname, ".."), {
+  setHeaders(res, filePath) {
+    if (/\.html$/i.test(filePath)) res.setHeader("Cache-Control", "no-cache");
+    else if (/\.(js|css|svg|png|jpe?g|gif|webp|woff2?)$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "public, max-age=604800");
+    }
+  },
+}));
+
+/* 健康检查：给部署探针 / 监控用 */
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    uptime: Math.round(process.uptime()),
+    users: db.users.length,
+    topics: db.topics.length,
+    replies: Object.values(db.replies).reduce((n, l) => n + l.length, 0),
+    time: Date.now(),
+  });
+});
 
 /* ================= 认证 API ================= */
 
@@ -324,7 +476,7 @@ function notifyTo(toUid, fromUser, text, topicId, type) {
   if (toUid === fromUser.id) return; /* 自己的操作不通知自己 */
   db.notifications = db.notifications || [];
   db.notifications.push({
-    id: "n" + store.nextId("replyId"),
+    id: "n" + store.nextId("notificationId"),
     to: toUid, from: fromUser.id, fromName: fromUser.nickname, fromColor: fromUser.color,
     text, topicId, type, time: Date.now(), read: false,
   });
@@ -334,6 +486,8 @@ function notifyTo(toUid, fromUser, text, topicId, type) {
     const drop = new Set(mine.slice(0, mine.length - 50).map((n) => n.id));
     db.notifications = db.notifications.filter((n) => !drop.has(n.id));
   }
+  /* 通知本身要落盘：调用方即使没有 save，通知也不能丢 */
+  store.save();
 }
 
 /* ---------- 点赞（服务端计数 + 按用户去重） ---------- */
@@ -388,7 +542,6 @@ app.get("/api/me/unread-count", (req, res) => {
   db.notifications = db.notifications || [];
   const notif = db.notifications.filter((n) => n.to === user.id && !n.read).length;
   let dm = 0;
-  for (const [tid, list] of Object.entries(db.replies || {})) {} /* 占位 */
   for (const m of db.messages || []) {
     if (m.to === user.id && !m.read) dm++;
   }
@@ -448,14 +601,11 @@ const UPLOAD_DIR = path.join(__dirname, "data", "uploads");
 app.post("/api/upload", (req, res) => {
   const me = currentUser(req);
   if (!me) return res.status(401).json({ error: "请先登录" });
-  const m = /^data:image\/(png|jpe?g|gif|webp);base64,(.+)$/.exec((req.body || {}).data || "");
-  if (!m) return res.status(400).json({ error: "仅支持 png/jpg/gif/webp 图片" });
-  const buf = Buffer.from(m[2], "base64");
-  if (!buf.length || buf.length > 3 * 1024 * 1024) return res.status(400).json({ error: "图片大小需在 3MB 以内" });
+  const parsed = parseImageDataUrl((req.body || {}).data);
+  if (!parsed) return res.status(400).json({ error: "仅支持 png/jpg/gif/webp 图片（且需为真实图片内容）" });
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const ext = m[1] === "jpeg" ? "jpg" : m[1];
-  const fname = `u${me.id}_${Date.now()}.${ext}`;
-  fs.writeFileSync(path.join(UPLOAD_DIR, fname), buf);
+  const fname = `u${me.id}_${Date.now()}.${parsed.ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, fname), parsed.buf);
   res.json({ ok: true, url: "/uploads/" + fname });
 });
 app.use("/uploads", express.static(UPLOAD_DIR));
@@ -522,7 +672,7 @@ app.post("/api/messages/:uid", (req, res) => {
   }
   db.messages = db.messages || [];
   const msg = {
-    id: "m" + store.nextId("replyId"),
+    id: "m" + store.nextId("messageId"),
     from: me.id, to: other,
     text: String(text || "").trim().slice(0, 500),
     time: Date.now(), read: false,
@@ -585,14 +735,11 @@ app.patch("/api/me/profile", (req, res) => {
 app.post("/api/me/avatar", (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: "请先登录" });
-  const m = /^data:image\/(png|jpe?g|gif|webp);base64,(.+)$/.exec((req.body || {}).data || "");
-  if (!m) return res.status(400).json({ error: "仅支持 png/jpg/gif/webp 图片" });
-  const buf = Buffer.from(m[2], "base64");
-  if (!buf.length || buf.length > 3 * 1024 * 1024) return res.status(400).json({ error: "图片大小需在 3MB 以内" });
+  const parsed = parseImageDataUrl((req.body || {}).data);
+  if (!parsed) return res.status(400).json({ error: "仅支持 png/jpg/gif/webp 图片（且需为真实图片内容）" });
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const ext = m[1] === "jpeg" ? "jpg" : m[1];
-  const fname = `av${user.id}_${Date.now()}.${ext}`;
-  fs.writeFileSync(path.join(UPLOAD_DIR, fname), buf);
+  const fname = `av${user.id}_${Date.now()}.${parsed.ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, fname), parsed.buf);
   if (user.avatar && /^\/uploads\//.test(user.avatar)) {
     try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(user.avatar))); } catch {}
   }
@@ -641,12 +788,21 @@ app.post("/api/auth/login", (req, res) => {
   const { email, password } = req.body || {};
   const key = String(email || "").trim();
   const user = db.users.find((u) => u.email === key || u.nickname === key);
-  if (!user || !verifyPw(password, user.pass)) return res.status(401).json({ error: "邮箱或密码不正确" });
-  const sid = token();
-  db.sessions[sid] = { uid: user.id, expires: Date.now() + SESSION_TTL };
-  store.save();
-  setCookie(res, "sid", sid, SESSION_TTL);
-  res.json({ ok: true, user: pubUser(user) });
+  /* 密码正确即放行（并清空失败计数）；只有密码错误才受限流约束。
+     这样「手滑连错 5 次后输对密码」不会被锁在门外。 */
+  if (user && verifyPw(password, user.pass)) {
+    clearLoginFail(req, key);
+    const sid = token();
+    db.sessions[sid] = { uid: user.id, expires: Date.now() + SESSION_TTL };
+    store.save();
+    setCookie(res, "sid", sid, SESSION_TTL);
+    return res.json({ ok: true, user: pubUser(user) });
+  }
+  if (loginBlocked(req, key)) {
+    return res.status(429).json({ error: "尝试次数过多，请 5 分钟后再试" });
+  }
+  recordLoginFail(req, key);
+  res.status(401).json({ error: "邮箱或密码不正确" });
 });
 
 /* 退出 / 当前用户 */
@@ -678,17 +834,14 @@ const levelOf = (n) => {
 const likeCountOf = (uid) => ((db.userLikes || {})[uid] || []).length;
 
 /* 某话题的回复列表（附评论人头像/年级/点赞数）——列表与详情两个接口共用，保证数字同源 */
-const repliesOfId = (tid) => {
-  const gradeOf = (uid) => {
-    const u = db.users.find((x) => x.id === uid);
-    return u ? (u.grade ?? null) : null;
-  };
+const repliesOfId = (tid, userMap) => {
+  const um = userMap || new Map(db.users.map((u) => [u.id, u]));
   const lc = (db.likes || {})[tid] || {};
   return (db.replies[tid] || []).map((r) => {
-    const ru = r.uid ? db.users.find((x) => x.id === r.uid) : null;
+    const ru = r.uid ? um.get(r.uid) : null;
     const ul = r.uid ? likeCountOf(r.uid) : 0;
     const lv = levelOf(ul);
-    return { ...r, avatar: ru ? (ru.avatar || null) : null, grade: r.uid ? gradeOf(r.uid) : null, likeCount: lc[r.id] ? lc[r.id].length : 0, uLikes: ul, uLv: lv.lv, uTitle: lv.title };
+    return { ...r, avatar: ru ? (ru.avatar || null) : null, grade: ru ? (ru.grade ?? null) : null, likeCount: lc[r.id] ? lc[r.id].length : 0, uLikes: ul, uLv: lv.lv, uTitle: lv.title };
   });
 };
 
@@ -696,8 +849,10 @@ const repliesOfId = (tid) => {
 app.get("/api/topics", (req, res) => {
   db.likes = db.likes || {};
   db.viewCounts = db.viewCounts || {};
+  /* 预建 uid -> user 映射，避免每个 topic × 每条回复都全表扫 */
+  const um = new Map(db.users.map((u) => [u.id, u]));
   res.json(db.topics.map((t) => {
-    const u = t.uid ? db.users.find((x) => x.id === t.uid) : null;
+    const u = t.uid ? um.get(t.uid) : null;
     const al = u ? likeCountOf(u.id) : 0;
     const alv = u ? levelOf(al) : { lv: "Lv1", title: "社区萌新" };
     return {
@@ -709,7 +864,7 @@ app.get("/api/topics", (req, res) => {
       authorTitle: alv.title,
       likeCount: (db.likes[t.id] && db.likes[t.id].op) ? db.likes[t.id].op.length : 0,
       viewCount: db.viewCounts[t.id] || 0,
-      repliesData: repliesOfId(t.id),
+      repliesData: repliesOfId(t.id, um),
     };
   }));
 });
@@ -731,14 +886,34 @@ app.post("/api/topics/:id/view", (req, res) => {
   db.viewSeen = db.viewSeen || {};
   db.viewCounts = db.viewCounts || {};
   db.viewSeen[key] = db.viewSeen[key] || {};
+  /* 记录首次浏览时间戳（而非 1），供 TTL 清理判断 */
   if (!db.viewSeen[key][tid]) {
-    db.viewSeen[key][tid] = 1;
+    db.viewSeen[key][tid] = Date.now();
     db.viewCounts[tid] = (db.viewCounts[tid] || 0) + 1;
     store.save();
   }
   /* 返回增量，基准浏览量由前端（静态数据/帖子数据）自带，两者相加展示 */
   res.json({ ok: true, extra: db.viewCounts[tid] || 0 });
 });
+/* viewSeen 只增不减会让 db.json 随访客量无限膨胀，这里定期清理：
+   超过 30 天没再出现的访客记录直接丢弃（浏览量总数 db.viewCounts 不受影响）。 */
+const VIEW_SEEN_TTL = 30 * 24 * 3600 * 1000;
+function sweepViewSeen() {
+  if (!db.viewSeen) return;
+  const now = Date.now();
+  let changed = false;
+  for (const k of Object.keys(db.viewSeen)) {
+    const rec = db.viewSeen[k];
+    if (!rec || typeof rec !== "object") { delete db.viewSeen[k]; changed = true; continue; }
+    for (const tid of Object.keys(rec)) {
+      const at = rec[tid];
+      if (typeof at === "number" && now - at > VIEW_SEEN_TTL) { delete rec[tid]; changed = true; }
+      else if (typeof at !== "number") { delete rec[tid]; changed = true; }
+    }
+  }
+  if (changed) store.save();
+}
+setInterval(sweepViewSeen, 6 * 3600 * 1000).unref?.();
 app.post("/api/topics", (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: "请先登录" });
@@ -769,9 +944,10 @@ app.delete("/api/topics/:id", (req, res) => {
   db.topics = db.topics.filter((x) => x.id !== t.id);
   delete db.replies[t.id];
   delete db.likes[t.id];
-  if (db.favorites) {
-    for (const k of Object.keys(db.favorites)) {
-      db.favorites[k] = db.favorites[k].filter((x) => x !== t.id);
+  if (db.viewCounts) delete db.viewCounts[t.id];
+  if (db.viewSeen) {
+    for (const k of Object.keys(db.viewSeen)) {
+      if (db.viewSeen[k] && typeof db.viewSeen[k] === "object") delete db.viewSeen[k][t.id];
     }
   }
   /* 同步清理所有用户收藏中的该话题 */
@@ -846,14 +1022,21 @@ function requireAdmin(req, res, next) {
 
 app.post("/api/admin/login", (req, res) => {
   const { username, password } = req.body || {};
-  if (username !== db.adminCred.username || !verifyPw(password, db.adminCred.pass)) {
-    return res.status(401).json({ error: "管理员账号或密码不正确" });
+  const acc = String(username || "").trim();
+  /* 密码正确即放行；错误才受限流约束 */
+  if (acc === adminCred.username && verifyPw(password, adminCred.pass)) {
+    clearLoginFail(req, "admin:" + acc);
+    const aid = token();
+    db.adminSessions[aid] = { expires: Date.now() + SESSION_TTL };
+    store.save();
+    setCookie(res, "aid", aid, SESSION_TTL);
+    return res.json({ ok: true });
   }
-  const aid = token();
-  db.adminSessions[aid] = { expires: Date.now() + SESSION_TTL };
-  store.save();
-  setCookie(res, "aid", aid, SESSION_TTL);
-  res.json({ ok: true });
+  if (loginBlocked(req, "admin:" + acc)) {
+    return res.status(429).json({ error: "尝试次数过多，请 5 分钟后再试" });
+  }
+  recordLoginFail(req, "admin:" + acc);
+  res.status(401).json({ error: "管理员账号或密码不正确" });
 });
 app.post("/api/admin/logout", (req, res) => {
   const aid = parseCookies(req).aid;
@@ -935,6 +1118,9 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
   db.topics = db.topics.filter((t) => t.uid !== id);
   for (const k of Object.keys(db.replies)) db.replies[k] = db.replies[k].filter((r) => r.uid !== id);
   for (const [tk, s] of Object.entries(db.sessions)) if (s.uid === id) delete db.sessions[tk];
+  /* 私信与通知也要清，否则残留引用会一直堆积 */
+  db.messages = (db.messages || []).filter((m) => m.from !== id && m.to !== id);
+  db.notifications = (db.notifications || []).filter((n) => n.to !== id && n.from !== id);
   if (db.userLikes) {
     delete db.userLikes[id];
     for (const k of Object.keys(db.userLikes)) db.userLikes[k] = db.userLikes[k].filter((x) => x !== id);
@@ -949,9 +1135,10 @@ app.delete("/api/admin/topics/:id", requireAdmin, (req, res) => {
   db.topics = db.topics.filter((x) => x.id !== t.id);
   delete db.replies[t.id];
   delete db.likes[t.id];
-  if (db.favorites) {
-    for (const k of Object.keys(db.favorites)) {
-      db.favorites[k] = db.favorites[k].filter((x) => x !== t.id);
+  if (db.viewCounts) delete db.viewCounts[t.id];
+  if (db.viewSeen) {
+    for (const k of Object.keys(db.viewSeen)) {
+      if (db.viewSeen[k] && typeof db.viewSeen[k] === "object") delete db.viewSeen[k][t.id];
     }
   }
   /* 同步清理所有用户收藏中的该话题 */
@@ -971,7 +1158,50 @@ app.post("/api/admin/topics/:id/pin", requireAdmin, (req, res) => {
   res.json({ ok: true, pinned: t.pinned });
 });
 
+/* 未知 API 路径返回 JSON 404（而不是 Express 默认 HTML） */
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "接口不存在" });
+});
+
+/* ---------- 统一错误处理 ---------- */
+/* 必须注册在所有路由之后：Express 只在 4 参数中间件里处理错误。
+   作用是让任何路由抛错都返回 JSON，而不是 Express 默认的 HTML 错误页。 */
+app.use((err, req, res, next) => {
+  console.error("[服务端错误]", req.method, req.originalUrl, err && err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: "服务器内部错误" });
+});
+
 /* 启动 */
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`[风华正茂] 服务已启动: http://127.0.0.1:${config.port}`);
+});
+
+/* ---------- 优雅关闭 ---------- */
+/* db 常态在内存里，靠 store.save() 落盘；退出前必须 flush，
+   否则最后一次写入会丢。 */
+let shuttingDown = false;
+function shutdown(sig) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n[风华正茂] 收到 ${sig}，正在关闭…`);
+  server.close(() => {
+    try { store.flush(); } catch (e) { console.error("[存储] 退出前落盘失败:", e.message); }
+    console.log("[风华正茂] 已安全退出");
+    process.exit(0);
+  });
+  /* 兜底：5 秒内没关完就强退（此时数据可能未落盘） */
+  setTimeout(() => {
+    try { store.flush(); } catch {}
+    console.error("[风华正茂] 关闭超时，强制退出");
+    process.exit(1);
+  }, 5000).unref();
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("unhandledRejection", (e) => console.error("[未处理的 Promise 拒绝]:", e));
+process.on("uncaughtException", (e) => {
+  console.error("[未捕获异常]:", e);
+  try { store.flush(); } catch {}
+  process.exit(1);
 });

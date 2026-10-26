@@ -79,6 +79,8 @@ cp server/config.example.json server/config.json
 | `smtp.pass` | **SMTP authorization code** (not the mailbox password) |
 | `admin.username` | Admin login account (any email format) |
 | `admin.password` | Admin password — use a strong one |
+| `devLogCodes` | Print verification codes to the console (default `false`; forced off when `NODE_ENV=production`) |
+| `secureCookie` | Add the `Secure` flag to session cookies (default `false`; **set to `true` for public HTTPS deployments**) |
 
 ### 3. Getting a QQ Mail SMTP authorization code
 
@@ -106,6 +108,50 @@ npm start
 Supported: `PORT`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_NAME`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
 
 > If only environment variables are set and `server/config.json` is missing, the app falls back to `config.example.json` and warns you.
+
+## Security hardening
+
+The project targets **small, private alumni communities**, yet ships with the following protections:
+
+| | Protection | Details |
+|---|---|---|
+| 🛡️ | **Login brute-force defense** | Counted per (client IP + account); 5 failures within 5 minutes triggers a lockout. A **correct password always passes** and resets the counter, so real users are never locked out |
+| 🛡️ | **Origin check (CSRF)** | Every write request (POST/PUT/PATCH/DELETE) must have an `Origin` matching `Host`; cross-site requests get 403. Non-browser clients (no Origin) are allowed |
+| 🛡️ | **Image magic-byte sniffing** | Uploads are checked against PNG/JPEG/GIF/WEBP file signatures, blocking HTML/scripts disguised as images (stored XSS) |
+| 🛡️ | **Password hashing** | scrypt with a random salt, stored as `salt:hash`. The admin password hash stays **in memory only** — it is never written to `db.json` |
+| 🛡️ | **Session safety** | HttpOnly + SameSite=Lax cookies; sessions auto-renew from 3 days to 7 days when they are about to expire |
+| 🛡️ | **Body size limits** | JSON bodies capped at 8 MB, image data URLs capped at 3 MB |
+| 🛡️ | **Graceful shutdown** | SIGINT/SIGTERM stops accepting connections, flushes the database, then exits; uncaught exceptions are logged and surfaced instead of failing silently |
+
+> 🔐 For public deployments, also set `SECURE_COOKIE=true` (or `secureCookie` in `config.json`) and enable HTTPS at the reverse proxy.
+
+## Health check
+
+```bash
+curl http://127.0.0.1:8123/api/health
+# {"ok":true,...}
+```
+
+Useful for load-balancer probes and post-deploy verification.
+
+## Tests
+
+Two dependency-free smoke suites are included (Node 18+ built-in `fetch`, nothing extra to install):
+
+```bash
+# 1. Seed test data (writes db.json — must run before the server starts)
+node test/smoke.prepare.js
+
+# 2. Start the server in another terminal
+PORT=8321 npm start
+
+# 3. Run the suites
+node test/smoke.test.js   # 21 checks: security & API baseline
+node test/smoke.flow.js    # 49 checks: register→post→comment→like→DM→favorite→notify→admin
+```
+
+> ⚠️ The suites read and write `server/data/db.json` — never run them against production data.
+> Admin credentials are read from `server/config.json` by default; override with the `ADMIN_USERNAME` / `ADMIN_PASSWORD` environment variables.
 
 ## Pages
 
@@ -154,9 +200,13 @@ highschool-forum/
 ├── server/
 │   ├── server.js                    Express backend (API + static + stats)
 │   ├── mailer.js                    SMTP verification code sender
-│   ├── store.js                     JSON file database (atomic writes)
+│   ├── store.js                     JSON file database (atomic + debounced writes)
 │   ├── config.example.json          Config template
 │   └── data/                        db.json + uploads/ (git-ignored)
+├── test/
+│   ├── smoke.prepare.js             Seeds the test user (writes db.json, before server start)
+│   ├── smoke.test.js                Security & API baseline smoke tests (21 checks)
+│   └── smoke.flow.js                Full end-to-end business-flow regression (49 checks)
 └── assets/*.svg                     Hand-drawn style illustrations
 ```
 
@@ -164,8 +214,9 @@ highschool-forum/
 
 - **Frontend**: vanilla JavaScript (IIFE) + hand-written CSS — zero build, zero framework
 - **Backend**: Node.js + Express 4
-- **Storage**: JSON file (atomic writes); images on local disk under `uploads/`
+- **Storage**: JSON file (atomic + debounced writes); images on local disk under `uploads/`
 - **Auth**: scrypt password hashing + HttpOnly cookies + email verification codes
+- **Tests**: dependency-free smoke suites (Node built-in `fetch`), 70 assertions in total
 
 > Design choice: **keep it as simple as possible to run.** No bundler, no database dependency — clone and go.
 
@@ -180,6 +231,7 @@ highschool-forum/
 - **Changing port / auth code / admin password**: edit `server/config.json` only, then restart
 - **Static asset caching**: HTML references carry `?v=N`; bump it after changing JS/CSS
 - **Rollback**: find a baseline with `git log`, then `git checkout <hash> -- .`
+- **Public deployment**: enable HTTPS and set `secureCookie: true`
 
 ## Roadmap
 

@@ -4,7 +4,10 @@
   "private": true,
   "description": "风华正茂 · 高中同学故事纪念站（Discourse 风格 + 用户系统）",
   "scripts": {
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "test:prepare": "node test/smoke.prepare.js",
+    "test:api": "node test/smoke.test.js",
+    "test:flow": "node test/smoke.flow.js"
   },
   "dependencies": {
     "express": "^4.21.0",

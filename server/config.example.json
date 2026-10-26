@@ -11,5 +11,6 @@
     "username": "admin@example.com",
     "password": "CHANGE_ME_BEFORE_START"
   },
-  "devLogCodes": true
+  "devLogCodes": false,
+  "secureCookie": false
 }

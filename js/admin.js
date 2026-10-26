@@ -8,7 +8,9 @@
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[c]));
-  const CATS = { 2018: "2018级", 2019: "2019级", 2020: "2020级" };
+  /* 年级分类：动态取自 /api/categories（基础配置 ∪ 已注册用户年级），
+     不再硬编码 2018/2019/2020，否则新增年级在后台会显示成裸数字。 */
+  let CATS = {};
 
   /* 恢复主题偏好（admin 页不加载 auth.js，需自行读取） */
   try {
@@ -130,6 +132,9 @@
 
     const maxDay = Math.max(1, ...stats.days.map((d) => d.count));
     const pageRows = Object.entries(stats.pages).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    /* 用接口返回的动态年级表覆盖 CATS */
+    CATS = {};
+    (cats || []).forEach((c) => { CATS[c.id] = c.label; });
 
     root.innerHTML = `
       <div class="adm-stats">
