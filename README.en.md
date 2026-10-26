@@ -6,7 +6,8 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](#-license)
+[![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.x-blue.svg)](LICENSE)
+[![Commercial](https://img.shields.io/badge/Commercial-Need%20License-orange.svg)](#-commercial-license-required)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
 
 [简体中文](README.md) · **English**
@@ -207,13 +208,34 @@ Issues and PRs are welcome. Before submitting, make sure you:
 
 ## License
 
-Code is released under the **MIT License**. UI style references:
+This project is licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)**.
+
+### You may freely
+
+- ✅ Use for personal study, research, hobby projects, and amateur pursuits
+- ✅ Use by schools, charities, public research organizations, and government institutions
+- ✅ Modify the source code and create derivative works
+- ✅ Distribute copies for noncommercial purposes (with this license and copyright notice retained)
+
+### You may not
+
+- ❌ **Use for any commercial purpose** (including selling the software, paid SaaS, or embedding into commercial products)
+- ❌ Sublicense or transfer any license
+- ❌ Distribute after removing the copyright notice
+
+### Commercial license required?
+
+For commercial use, please request a license by:
+
+> Opening an issue titled **"Commercial License Inquiry"** on [Issues](https://github.com/DHJ999/highschool-forum/issues), or contacting the author via the project page.
+
+### UI style references (design ideas only)
 
 - [Discourse](https://www.discourse.org/) (GPL-2.0) — three-column layout idea
 - [bbs-go](https://github.com/mlogclub/bbs-go) (GPL-3.0) — card and color style
 - [Cropper.js](https://github.com/fengyuanchen/cropperjs) (MIT) — avatar cropping
 
-> This project is an independent implementation; no source code was copied from the projects above.
+> This project is an **independent implementation**; no source code was copied from the projects above.
 
 ---
 

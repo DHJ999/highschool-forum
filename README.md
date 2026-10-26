@@ -6,7 +6,8 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](#-许可证)
+[![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.x-blue.svg)](LICENSE)
+[![Commercial](https://img.shields.io/badge/Commercial-Need%20License-orange.svg)](#-需要商业授权)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-贡献)
 [![Made with](https://img.shields.io/badge/Made%20with-%E2%9D%A4-red)]()
 
@@ -208,13 +209,34 @@ highschool-forum/
 
 ## 许可证
 
-代码采用 **MIT License**。界面风格参考：
+本项目采用 **[PolyForm Noncommercial License 1.0.0](LICENSE)**。
+
+### 你可以自由做
+
+- ✅ 个人学习、研究、业余项目、爱好使用
+- ✅ 用于学校、慈善机构、公共研究机构、政府部门等非营利组织
+- ✅ 修改源代码、创建衍生作品
+- ✅ 在非商业前提下分发副本（需保留本许可证与版权声明）
+
+### 你不能做
+
+- ❌ **任何商业用途**（包括但不限于售卖软件、SaaS 收费、集成进商业产品）
+- ❌ 转授许可或转让许可
+- ❌ 移除版权声明后分发
+
+### 需要商业授权？
+
+如需商业使用，请通过以下方式联系取得授权：
+
+> 在 [Issues](https://github.com/DHJ999/highschool-forum/issues) 中提交标题为 **「商业授权咨询」** 的 issue，或在项目主页联系作者。
+
+### 界面风格参考（仅借鉴设计思路）
 
 - [Discourse](https://www.discourse.org/)（GPL-2.0）— 三栏布局思路
 - [bbs-go](https://github.com/mlogclub/bbs-go)（GPL-3.0）— 卡片与配色风格
 - [Cropper.js](https://github.com/fengyuanchen/cropperjs)（MIT）— 头像裁剪
 
-> 本项目为独立实现，未复制上述项目的源代码。
+> 本项目为**独立实现**，未复制上述项目的源代码。
 
 ---
 
